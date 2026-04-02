@@ -622,6 +622,30 @@ def auto_dashboard_config(
     if pretax_col and pretax_col in df.columns:
         kpi_cards.append(_kpi('Total Pre-Tax Amount', pd.to_numeric(df[pretax_col], errors='coerce').sum(), True))
 
+    # Add Invoice Count if we need more
+    if len(kpi_cards) < 4:
+        count = int(df[invoice_col].nunique()) if invoice_col and invoice_col in df.columns else len(df)
+        kpi_cards.append({
+            'title': 'Total Invoices',
+            'value': str(count),
+            'raw_value': count,
+            'is_currency': False,
+            'trend': 0,
+            'metric': 'count',
+        })
+
+    # Add unique parties if we still need more
+    if len(kpi_cards) < 4 and party_col and party_col in df.columns:
+        parties = int(df[party_col].nunique())
+        kpi_cards.append({
+            'title': 'Active Parties',
+            'value': str(parties),
+            'raw_value': parties,
+            'is_currency': False,
+            'trend': 0,
+            'metric': 'count',
+        })
+
     # Pad / trim to exactly 4
     kpi_cards = kpi_cards[:4]
 
@@ -750,6 +774,11 @@ def auto_dashboard_config(
 
     cat_values = get_category_values(df, party_col) if party_col else []
 
+    # Convert all KPI values to JSON-serializable types
+    for kpi in kpi_cards:
+        if 'raw_value' in kpi:
+            kpi['raw_value'] = float(kpi['raw_value']) if kpi.get('is_currency') else int(kpi['raw_value'])
+
     return {
         'kpi_cards':        kpi_cards,
         'charts':           charts,
@@ -761,11 +790,11 @@ def auto_dashboard_config(
         'category_values':  cat_values,
         'active_category':  category or 'All',
         'quarter':          quarter,
-        'row_count':        len(df),
+        'row_count':        int(len(df)),
         'top_company':      top_company,
         'top_amount':       top_amount,
         'total_revenue':    total_revenue,
-        'invoice_count':    invoice_count,
+        'invoice_count':    int(invoice_count),
     }
 
 
@@ -907,9 +936,98 @@ def ai_select_charts(df: pd.DataFrame, filename: str = "", quarter: str = "All",
         })
         priority += 1
     
-    # LIMIT: Return only 5-6 charts maximum
-    charts = sorted(charts, key=lambda c: c['priority'])[:6]
+    # RULE 6: Multi-dimensional (Radar) → Performance Profile
+    if len(numeric_cols) >= 4 and party_col and priority <= 6:
+        charts.append({
+            'id': f'radar_profile_{priority}',
+            'chartType': 'RADAR',
+            'title': f'Performance Profile: {party_col}',
+            'x_col': party_col,
+            'y_col': numeric_cols[0],
+            'z_col': None,
+            'series_col': None,
+            'aggregation': 'sum',
+            'limit': 5,
+            'orientation': 'vertical',
+            'business_insight': f'Multi-dimensional performance profile for top 5 {party_col.lower()} across key metrics.',
+            'priority': priority,
+        })
+        priority += 1
+
+    # RULE 7: Flow (Sankey) → Transaction Paths
+    if party_col and len(category_cols) >= 2 and currency_cols and priority <= 7:
+        other_cat = next((c for c in category_cols if c != party_col and c not in ignore_cols), None)
+        if other_cat:
+            charts.append({
+                'id': f'sankey_flow_{priority}',
+                'chartType': 'SANKEY',
+                'title': f'Revenue Flow: {party_col} to {other_cat}',
+                'x_col': party_col,
+                'y_col': currency_cols[0],
+                'z_col': None,
+                'series_col': other_cat,
+                'aggregation': 'sum',
+                'limit': 20,
+                'orientation': 'vertical',
+                'business_insight': f'Visualizes how {currency_cols[0].lower()} flows from {party_col.lower()} to {other_cat.lower()}.',
+                'priority': priority,
+            })
+            priority += 1
     
+    # LIMIT: Return only 8-10 charts maximum for a "Detailed" dashboard
+    charts = sorted(charts, key=lambda c: c['priority'])[:10]
+    
+    return charts
+
+
+def get_comparison_charts(dfs: list[pd.DataFrame], filenames: list[str]) -> list[dict]:
+    """
+    Generate charts specifically for comparing multiple quarters/files.
+    """
+    charts = []
+    
+    # Combine data with source label
+    combined = []
+    for i, df in enumerate(dfs):
+        d = df.copy()
+        d['_source'] = detect_quarter_from_filename(filenames[i]) or f"File {i+1}"
+        combined.append(d)
+    
+    full_df = pd.concat(combined, ignore_index=True)
+    numeric_cols = full_df.select_dtypes(include='number').columns.tolist()
+    currency_cols = [c for c in numeric_cols if any(k in c.lower() for k in ['amount','revenue','total'])]
+    
+    if currency_cols:
+        primary = currency_cols[0]
+        
+        # Quarter-over-Quarter Revenue (Bar Grouped)
+        charts.append({
+            'id': 'comparison_revenue_qoq',
+            'chartType': 'BAR_VERTICAL',
+            'title': f'Revenue Trends by Quarter ({primary})',
+            'x_col': '_source',
+            'y_col': primary,
+            'aggregation': 'sum',
+            'business_insight': 'Compares total revenue across all uploaded quarters.',
+            'priority': 0
+        })
+        
+        # Party Performance across Quarters (Stacked Bar)
+        party_col = next((c for c in full_df.columns if 'party' in c.lower()), None)
+        if party_col:
+            charts.append({
+                'id': 'comparison_party_performance',
+                'chartType': 'BAR_STACKED',
+                'title': f'Top Parties Across Quarters',
+                'x_col': '_source',
+                'y_col': primary,
+                'series_col': party_col,
+                'aggregation': 'sum',
+                'limit': 5,
+                'business_insight': 'Shows how the top 5 parties contributed to revenue each quarter.',
+                'priority': 1
+            })
+            
     return charts
 
 

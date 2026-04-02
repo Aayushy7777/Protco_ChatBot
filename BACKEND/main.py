@@ -660,18 +660,30 @@ async def generate_all_charts(request: AutoDashboardRequest):
 
         # AI auto-select charts
         chart_configs = ai_select_charts(combined_df, filenames[0], quarter, category)
+        
+        # Add comparison charts if viewing "All" quarters
+        if quarter == "All" and len(filenames) > 1:
+            dfs_to_compare = []
+            for fn in filenames:
+                f = get_file(fn)
+                if f: dfs_to_compare.append(f.df)
+            
+            comp_configs = get_comparison_charts(dfs_to_compare, filenames)
+            # Insert at beginning for visibility
+            chart_configs = comp_configs + chart_configs
 
         # Prepare data for each chart
         charts_with_data = []
         for config in chart_configs:
             try:
+                # For comparison charts, use combined_df but with special handling if needed
                 data = prepare_chart_data(combined_df, config)
                 charts_with_data.append({
                     **config,
                     'data': data
                 })
             except Exception as e:
-                logger.warning(f"Chart prep error for {config['chartType']}: {e}")
+                logger.warning(f"Chart prep error for {config.get('chartType', 'unknown')}: {e}")
                 continue
 
         return {

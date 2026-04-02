@@ -1,0 +1,11 @@
+Date,Party Name,Category,Quantity,Pre-Tax Amount,Tax Amount,Total Amount,Invoice No
+2024-01-15,Gold Medal Electronics,Switches,100,50000,9000,59000,INV-001
+2024-01-20,Silver Line Supplies,Fans,50,25000,4500,29500,INV-002
+2024-02-10,Gold Medal Electronics,Lights,200,80000,14400,94400,INV-003
+2024-02-15,Power Grid Corp,Switches,150,75000,13500,88500,INV-004
+2024-03-05,Silver Line Supplies,Switches,120,60000,10800,70800,INV-005
+2024-03-20,Gold Medal Electronics,Fans,80,40000,7200,47200,INV-006
+2024-04-10,Power Grid Corp,Lights,180,90000,16200,106200,INV-007
+2024-04-20,Bright Future Ltd,Switches,100,50000,9000,59000,INV-008
+2024-05-15,Gold Medal Electronics,Switches,250,125000,22500,147500,INV-009
+2024-05-25,Silver Line Supplies,Lights,140,70000,12600,82600,INV-010

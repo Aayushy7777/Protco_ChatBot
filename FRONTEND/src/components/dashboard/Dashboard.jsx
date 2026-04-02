@@ -32,8 +32,9 @@ const CHART_TYPE_CYCLE = {
 };
 
 const getChartSpan = (chart) => {
-  if (['CALENDAR_HEATMAP', 'SANKEY', 'HEATMAP'].includes(chart.chartType)) return 'col-span-2';
+  if (['CALENDAR_HEATMAP', 'SANKEY', 'HEATMAP', 'RADAR'].includes(chart.chartType)) return 'col-span-2';
   if ((chart.priority || 999) <= 2) return 'col-span-2';
+  if (chart.id?.startsWith('comparison_')) return 'col-span-2';
   return 'col-span-1';
 };
 
@@ -122,17 +123,15 @@ const Dashboard = memo(({ activeDataset, allDatasets = [], onQuarterChange, dete
     }
   }, [setAutoDashboard]);
 
-  // Auto-fetch when dataset first becomes available
+  // Auto-fetch when dataset first becomes available or changes
   useEffect(() => {
     if (!activeDataset) return;
-    didInit.current = false;           // reset so each new upload triggers fresh fetch
-  }, [activeDataset]);
+    didInit.current = false; // Reset init flag to allow fresh fetch
+  }, [activeDataset, allDatasets.length]); // Also trigger on new files uploaded
 
   useEffect(() => {
-    if (!activeDataset || didInit.current) {
-      return;
-    }
-    didInit.current = true;
+    // If we've already initialized for this exact state, skip
+    if (!activeDataset || didInit.current) return;
     
     // Validate that we have actual filenames
     let filenames = [];
@@ -142,15 +141,14 @@ const Dashboard = memo(({ activeDataset, allDatasets = [], onQuarterChange, dete
         return d.name || d;
       }).filter(Boolean);
     }
+    
     if (!filenames.length && activeDataset) {
       filenames = [activeDataset];
     }
     
-    if (filenames.length === 0) {
-      console.warn('No filenames resolved for dashboard fetch');
-      return;
-    }
+    if (filenames.length === 0) return;
     
+    didInit.current = true;
     fetchDashboard({ filenames, quarter: 'All', category: 'All' });
   }, [activeDataset, allDatasets, fetchDashboard]);
 
@@ -400,6 +398,7 @@ const Dashboard = memo(({ activeDataset, allDatasets = [], onQuarterChange, dete
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 10,
+                      gridColumn: getChartSpan(chart) === 'col-span-2' ? 'span 2' : 'auto',
                     }}>
                     {/* Chart header with title and buttons */}
                     <div style={{

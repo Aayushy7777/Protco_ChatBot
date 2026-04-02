@@ -36,6 +36,17 @@ const Chat = ({
     }
   }, [messages, storageKey]);
 
+  // ── Auto-trigger analysis for new files ──────────────────────────────────
+  useEffect(() => {
+    if (activeConversation && messages.length === 1 && !loading && !streaming) {
+      // Small delay to ensure everything is ready
+      const timer = setTimeout(() => {
+        handleSendMessage("Analyze this data and provide 3 key business insights with supporting charts.");
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeConversation, messages.length, loading, streaming, handleSendMessage]);
+
   const clearMemory = useCallback(() => {
     if (storageKey) {
       localStorage.removeItem(storageKey);
