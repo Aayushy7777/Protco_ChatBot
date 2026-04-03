@@ -13,6 +13,54 @@ import {
 
 const API = "http://localhost:8888";
 
+// ── File Info Banner Component ──
+function FileInfoBanner({ fileMetadata }) {
+  const auto = fileMetadata?.auto_detected || {};
+  if (!auto.domain) return null;
+
+  const formatCr = (n) => {
+    if (n >= 1e7) return (n / 1e7).toFixed(2) + " Cr";
+    if (n >= 1e5) return (n / 1e5).toFixed(2) + " L";
+    return n.toLocaleString("en-IN");
+  };
+
+  return (
+    <div style={{
+      display: "flex", gap: 16, padding: "8px 14px",
+      borderBottom: "1px solid #1e293b",
+      background: "#0a0f1a", flexWrap: "wrap",
+    }}>
+      {auto.domain && (
+        <Chip label="Type" value={auto.domain} />
+      )}
+      {auto.time_period && (
+        <Chip label="Period" value={auto.time_period} />
+      )}
+      {auto.total_revenue && auto.revenue_column && (
+        <Chip
+          label={auto.revenue_column}
+          value={"₹" + formatCr(auto.total_revenue)}
+        />
+      )}
+      {auto.total_clients && auto.client_column && (
+        <Chip
+          label={auto.client_column}
+          value={auto.total_clients + " unique"}
+        />
+      )}
+    </div>
+  );
+}
+
+function Chip({ label, value }) {
+  return (
+    <div style={{ fontSize: 11 }}>
+      <span style={{ color: "#475569" }}>{label}: </span>
+      <span style={{ color: "#a5b4fc", fontWeight: 500 }}>{value}</span>
+    </div>
+  );
+}
+
 // ── Company Filter Sidebar Component ──
 function CompanyFilterSidebar({ companies, selected, onSelect }) {
   const [search, setSearch] = useState("");
@@ -86,6 +134,7 @@ function CompanyFilterSidebar({ companies, selected, onSelect }) {
 export default function App() {
   const [datasets, setDatasets] = useState([]);
   const [activeDataset, setActiveDataset] = useState(null);
+  const [fileMetadata, setFileMetadata] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dashboardReadyMsg, setDashboardReadyMsg] = useState(false);
@@ -167,6 +216,11 @@ export default function App() {
 
       const firstName = files[0].name;
       setActiveDataset(firstName);
+      
+      // Capture auto-detected metadata from upload response
+      if (data.uploaded && data.uploaded[0]) {
+        setFileMetadata(data.uploaded[0]);
+      }
 
       // Auto-detect quarter from filename and jump to that tab
       const q = detectQuarterFromFilename(firstName);
@@ -293,6 +347,9 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {/* ── Auto-detected file info banner ── */}
+      <FileInfoBanner fileMetadata={fileMetadata} />
 
       {uploading && (
         <div style={{

@@ -4,33 +4,40 @@ Used by RAG agent for intelligent chart recommendations.
 """
 
 DASHBOARD_PROMPT = """You are a senior business intelligence analyst.
-Given this dataset profile, generate exactly 8 chart configurations for an executive dashboard.
 
-Dataset profile:
+A dataset has been uploaded. Here is what was automatically detected:
+
 {context}
 
-Return ONLY a valid JSON array. No markdown. No explanation.
+Generate 6 chart configurations for a dashboard. 
 
-Rules for chart selection:
-1. ALWAYS include a "Revenue by company" bar chart if revenue/amount column exists
-2. ALWAYS include a "Monthly trend" line chart if a date column exists  
-3. ALWAYS include a "Top 10 clients by value" horizontal bar chart
-4. ALWAYS include a "Quarter-wise comparison" grouped bar chart if quarter data exists
-5. Include a pie chart for category/region distribution (max 8 slices)
-6. Include a scatter plot only if 2 meaningful numeric correlations exist
-7. Sort by business impact — revenue charts first, operational last
-8. Every chart MUST have an "insight" field: one sentence saying what action this chart suggests
+STRICT RULES:
+- Use ONLY the column names exactly as they appear above
+- Do NOT mention Q1/Q2/Q3/Q4 unless those values exist in the data
+- Choose chart type based on the data shape:
+  * One category vs one number → bar (vertical or horizontal)
+  * Trend over time → line or area
+  * Share/composition → pie (max 8 slices)  
+  * Two numbers vs each other → scatter
+- For the time column use whatever grouping fits the detected date range
+- Priority order: total revenue breakdown FIRST, trends SECOND, 
+  distributions THIRD
+- Every chart needs an "insight" field — one business sentence about 
+  what this chart reveals
 
-Each object must have:
-- type: "bar" | "line" | "pie" | "scatter" | "area"
-- title: clear business title (e.g. "Top 10 clients by revenue Q2")
-- xKey: exact column name
-- yKey: exact column name  
-- insight: "Bhadra Electric accounts for 6.65% of total revenue — consider dedicated account manager"
-- priority: 1–8
-- chartStyle: "horizontal" | "vertical" | "stacked" (for bar charts)
-
-Return JSON array now:"""
+Return ONLY a valid JSON array, no markdown, no explanation:
+[
+  {{
+    "type": "bar",
+    "title": "Top 15 clients by total revenue value",
+    "xKey": "<exact client column name from above>",
+    "yKey": "<exact amount column name from above>",
+    "chartStyle": "horizontal",
+    "insight": "One sentence about what this reveals",
+    "priority": 1
+  }},
+  ...
+]"""
 
 
 def get_dashboard_prompt(context: str) -> str:

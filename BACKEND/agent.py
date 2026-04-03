@@ -21,6 +21,7 @@ from csv_processor import (
     aggregate, time_series, apply_filters, ColumnMeta, auto_dashboard_config,
     format_inr, detect_quarter_from_filename, get_category_values
 )
+from profiler import profile_dataframe, profile_to_prompt_context
 
 logger = logging.getLogger(__name__)
 
@@ -290,42 +291,37 @@ Respond ONLY with: CHAT or CHART or TABLE or STATS or DASHBOARD"""
     ) -> AgentResponse:
         ctx = build_multi_file_context(all_files, active_file=filename)
 
-        # ── Build data-context summary for system prompt ──
-        data_context_lines = []
+        # ── Build data-context summary using profiler ──
         f_obj = get_file(filename)
-        if f_obj:
+        if f_obj and hasattr(f_obj, 'df'):
             try:
-                from csv_processor import (
-                    _find_col, CATEGORY_COLS, AMOUNT_COLS, COUNT_COLS
+                # Profile the DataFrame to auto-detect everything
+                profile = profile_dataframe(f_obj.df, filename=filename)
+                profile_context = profile_to_prompt_context(profile)
+                
+                system_ctx = (
+                    f"You are an expert data analyst assistant.\n\n"
+                    f"A file has been uploaded. Here is everything automatically detected about it:\n\n"
+                    f"{profile_context}\n\n"
+                    f"Your rules:\n"
+                    f"1. NEVER mention Q1, Q2, Q3, Q4 unless those exact words appear as column values in the data itself.\n"
+                    f"2. NEVER assume time periods — read them from the date column ranges above.\n"
+                    f"3. NEVER assume column names — use only the exact column names listed above.\n"
+                    f"4. When you see a date column, group by whatever granularity makes sense:\n"
+                    f"   - Data spanning < 3 months → group by week or day\n"
+                    f"   - Data spanning 3–12 months → group by month\n"
+                    f"   - Data spanning > 12 months → group by quarter or year\n"
+                    f"5. For revenue/amount questions, always state the total and top contributors.\n"
+                    f"6. For client questions, always rank by the detected revenue column.\n"
+                    f"7. If asked to generate a chart, pick axes from the actual column names above.\n"
+                    f"8. Respond in plain business language. Use ₹ and Cr/Lakh for Indian amounts.\n"
+                    f"9. If a question cannot be answered from this data, say exactly why (which column is missing).\n"
                 )
-                df = f_obj.df
-                party_col  = _find_col(df, CATEGORY_COLS)
-                amount_col = _find_col(df, AMOUNT_COLS)
-                inv_col    = _find_col(df, COUNT_COLS)
-
-                unique_parties = df[party_col].nunique() if party_col else '?'
-                inv_count = df[inv_col].nunique() if inv_col else len(df)
-                total_rev = ''
-                top_party = ''
-                top_amt   = ''
-                if party_col and amount_col:
-                    import pandas as pd
-                    grp = df.groupby(party_col)[amount_col].sum()
-                    top_party = str(grp.idxmax())
-                    top_amt   = format_inr(float(grp.max()))
-                    total_rev = format_inr(float(df[amount_col].sum()))
-
-                data_context_lines = [
-                    f"Active file: {filename}",
-                    f"Quarter filter: {active_quarter}",
-                    f"Category filter: {active_category}",
-                    f"Total companies: {unique_parties}",
-                    f"Top company: {top_party} earning {top_amt}",
-                    f"Total invoices: {inv_count}",
-                    f"Total revenue: {total_rev}",
-                ]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Profile generation failed: {e}, using fallback context")
+                system_ctx = "You are a concise, highly capable business data analyst AI."
+        else:
+            system_ctx = "You are a concise, highly capable business data analyst AI."
 
         # ── Pull conversation memory ──
         mem_turns = ""
@@ -335,20 +331,6 @@ Respond ONLY with: CHAT or CHART or TABLE or STATS or DASHBOARD"""
                 f"{m['role'].upper()}: {m['content']}"
                 for m in last_n
             )
-
-        # ── System context prefix ──
-        system_ctx = (
-            "You are a concise, highly capable business data analyst AI handling a specialized sales dashboard.\n\n"
-            "CRITICAL DATA CONTEXT (You definitively HAVE access to this data!):\n" +
-            "\n".join(f"- {l}" for l in data_context_lines) +
-            "\n\nRULES AND INSTRUCTIONS:\n"
-            "0. NEVER say 'I don't have access to your data' or 'specific company name will depend'. You hold the true data in the context above.\n"
-            "1. Be CONCISE and direct. Answer exactly what the user asks without adding unnecessary statistical fluff (e.g., do not randomly list 'Sum', 'Count', or 'Average' unless requested).\n"
-            "2. MONEY/CURRENCY: ALWAYS format currency in Indian Rupees (₹) using Indian numbering systems (Crores, Lakhs) seamlessly or as standard comma-separated INR.\n"
-            "3. If challenged about total revenue or top companies, exclusively use the 'Total revenue' and 'Top company' values from the CURRENT CONTEXT above.\n"
-            "4. DO NOT provide SQL queries or suggest writing queries. YOU are the analyst providing the final answer.\n"
-            "5. Maintain a professional, clean tone.\n"
-        ) if data_context_lines else ""
 
         # ── Build prompt ──
         history_turns = "\n".join(

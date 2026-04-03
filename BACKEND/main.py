@@ -37,6 +37,7 @@ from csv_processor import (
     auto_dashboard_config, detect_quarter_from_filename, get_category_values,
     ai_select_charts, prepare_chart_data
 )
+from profiler import profile_dataframe, profile_to_prompt_context
 from agent import agent, AgentResponse, generate_ceo_summary
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(name)s  %(message)s")
@@ -52,7 +53,6 @@ async def lifespan(app: FastAPI):
     logger.info(f"Ollama status: {health}")
     yield
     logger.info("Shutting down...")
-    await ollama.close()
 
 
 app = FastAPI(
@@ -179,6 +179,11 @@ async def upload_files(files: list[UploadFile] = File(...)):
 
         try:
             csv_file = parse_csv(f.filename, content)
+            
+            # Profile the DataFrame to auto-detect everything
+            profile = profile_dataframe(csv_file.df, filename=f.filename)
+            auto = profile.get("auto_detected", {})
+            
             results.append({
                 "name": csv_file.name,
                 "rows": csv_file.row_count,
@@ -199,6 +204,9 @@ async def upload_files(files: list[UploadFile] = File(...)):
                     }
                     for c in csv_file.columns
                 ],
+                # Send auto-detected info to frontend
+                "profile": profile_to_prompt_context(profile),
+                "auto_detected": auto,
             })
         except Exception as e:
             logger.exception(f"Parse error: {f.filename}")

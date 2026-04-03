@@ -1,0 +1,7 @@
+﻿{
+  "message": "What is the total amount?",
+  "active_file": "test_sample.csv",
+  "all_files": ["test_sample.csv"],
+  "conversation_history": [],
+  "session_id": "test"
+}
