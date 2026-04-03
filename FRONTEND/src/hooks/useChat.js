@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { useDashboardStore } from '../store/dashboardStore';
 
-const API = "http://localhost:8888";
+const API = "http://localhost:8000/api";
 
 export const useChat = (activeDataset, activeConversation, activeQuarter = 'All', activeCategory = 'All') => {
   const [loading, setLoading] = useState(false);
@@ -22,95 +22,87 @@ export const useChat = (activeDataset, activeConversation, activeQuarter = 'All'
   const handleSendMessage = useCallback(async (message) => {
     if (!message.trim() || loading || !activeConversation) return;
 
-    addMessage(activeConversation, {
-      role: 'user',
-      content: message,
-    });
-
-    setLoading(true);
-    setStreaming(true);
-    abortControllerRef.current = new AbortController();
-
-    addMessage(activeConversation, {
-      role: 'assistant',
-      content: '',
-    });
-
     try {
-      // Fetch list of all available files
-      const filesRes = await fetch(`${API}/api/files`);
-      const filesData = await filesRes.json();
-      const allFiles = (filesData.files || []).map(f => f.name);
+      // Update UI immediately for better perceived latency.
+      addMessage(activeConversation, { role: 'user', content: message });
+      addMessage(activeConversation, { role: 'assistant', content: '' });
 
-      const response = await fetch(`${API}/api/chat/stream`, {
+      setLoading(true);
+      setStreaming(false);
+
+      // Fetch list of all available files (for agent context selection).
+      const filesRes = await fetch(`${API}/files`);
+      const filesData = await filesRes.json().catch(() => ({}));
+      const allFiles = (filesData.files || []).map((f) => f.name);
+
+      const conversation_history = [
+        ...(messages || []),
+        { role: 'user', content: message },
+      ].slice(-30);
+
+      const response = await fetch(`${API}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
           active_file: activeDataset,
+          conversation_history,
           all_files: allFiles,
-          conversation_id: activeConversation,
-          session_id: `${activeDataset || 'none'}_${activeQuarter}_${activeCategory}`,
-          active_quarter: activeQuarter,
-          active_category: activeCategory,
         }),
-        signal: abortControllerRef.current.signal,
       });
 
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+        throw new Error(data?.detail || response.statusText || 'Chat request failed');
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
-      let pendingCharts = [];
+      const answer = data?.answer || '';
+      let finalAnswer = answer;
+      if (!finalAnswer.trim()) {
+        if (data?.intent === 'CHART' && data?.chart_config) {
+          finalAnswer = 'Chart generated and added to the dashboard.';
+        } else if (data?.intent === 'TABLE' && data?.table_columns?.length) {
+          finalAnswer = 'Table generated from your request.';
+        }
+      }
+      updateLastMessage(activeConversation, finalAnswer);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      if (data?.intent === 'CHART' && data?.chart_config) {
+        pinChart(data.chart_config);
+      }
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+      if (data?.intent === 'TABLE' && data?.table_columns?.length) {
+        const cols = data.table_columns || [];
+        const rows = data.table_data || [];
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              
-              if (data.status === 'token') {
-                fullContent += data.token;
-                updateLastMessage(activeConversation, fullContent);
-              } else if (data.status === 'chart') {
-                pendingCharts.push(data.chart);
-              } else if (data.status === 'done') {
-                // Process pending charts
-                pendingCharts.forEach(chart => {
-                  pinChart(chart);
-                });
-              }
-            } catch (e) {
-              // Ignore parse errors for empty chunks
-            }
-          }
+        // Render a simple markdown table into the assistant bubble.
+        if (cols.length > 0 && Array.isArray(rows) && rows.length > 0) {
+          const header = `| ${cols.join(' | ')} |`;
+          const sep = `| ${cols.map(() => '---').join(' | ')} |`;
+          const rowLines = rows
+            .slice(0, 50)
+            .map((r) => `| ${cols.map((c) => String(r?.[c] ?? '')).join(' | ')} |`)
+            .join('\\n');
+
+          updateLastMessage(activeConversation, `${answer}\\n\\n${header}\\n${sep}\\n${rowLines}`);
         }
       }
     } catch (err) {
-      if (err.name !== 'AbortError') {
-        updateLastMessage(activeConversation, `❌ Error: ${err.message}`);
-      }
+      updateLastMessage(
+        activeConversation,
+        `❌ Error: ${err?.message || String(err)}`
+      );
     } finally {
       setLoading(false);
       setStreaming(false);
     }
-  }, [activeConversation, activeDataset, activeQuarter, activeCategory, loading, addMessage, updateLastMessage, pinChart]);
+  }, [activeConversation, activeDataset, loading, messages, addMessage, updateLastMessage, pinChart]);
   
   const stopGeneration = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      setLoading(false);
-      setStreaming(false);
-    }
+    // Backend chat is non-streaming currently, so stop is best-effort.
+    abortControllerRef.current?.abort?.();
+    setLoading(false);
+    setStreaming(false);
   }, []);
 
   return {

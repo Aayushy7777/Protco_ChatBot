@@ -5,7 +5,7 @@ import ChartRenderer from './ChartRenderer';
 import KPICard from './KPICard';
 import { SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
-const API = 'http://localhost:8888';
+const API = 'http://localhost:8000/api';
 const CHART_COLORS = ['#00D4FF','#FF6B35','#7B2FBE','#00FF88','#FFD700','#FF3366','#4ECDC4','#45B7D1','#96CEB4'];
 
 const GM_NAVY    = '#0A0F2C';
@@ -49,7 +49,7 @@ const getChartHeight = (chart) => {
 const Dashboard = memo(({ activeDataset, allDatasets = [], onQuarterChange, detectedQuarter }) => {
   const { pinnedCharts, unpinChart, setAutoDashboard} = useDashboardStore();
   const [chartTypes, setChartTypes] = useState({});
-  const [quarterMap, setQuarterMap]       = useState({ Q1: null, Q2: null, Q3: null, Q4: null });
+  const [quarterMap, setQuarterMap]       = useState({});
   const [activeQuarter, setActiveQuarter] = useState('All');
   const [activeCategory, setActiveCategory] = useState('All');
   const [categoryValues, setCategoryValues] = useState([]);
@@ -58,29 +58,21 @@ const Dashboard = memo(({ activeDataset, allDatasets = [], onQuarterChange, dete
   const [loading, setLoading]             = useState(false);
   const didInit = useRef(false);
 
-  // ── Fetch quarter-status whenever files change ──────────────────────────────
-  useEffect(() => {
-    fetch(`${API}/api/quarter-status`)
-      .then(r => r.json())
-      .then(data => setQuarterMap(data))
-      .catch(() => {});
-  }, [allDatasets, activeDataset]);
-
   // ── Main fetch ─────────────────────────────────────────────────────────────
-  const fetchDashboard = useCallback(async ({ filenames, quarter, category }) => {
+  const fetchDashboard = useCallback(async ({ filenames }) => {
     if (!filenames || filenames.length === 0) {
       console.warn('fetchDashboard: no filenames provided');
       return;
     }
     setLoading(true);
     try {
-      console.log('Fetching dashboard with:', { filenames, quarter, category });
-      
-      // Fetch traditional dashboard (KPIs, CEO summary)
-      const dashRes = await fetch(`${API}/api/auto-dashboard`, {
+      const filename = filenames[0];
+
+      // Fetch auto dashboard charts
+      const dashRes = await fetch(`${API}/auto-dashboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filenames, quarter, category }),
+        body: JSON.stringify({ filename }),
       });
       
       if (!dashRes.ok) {
@@ -96,26 +88,8 @@ const Dashboard = memo(({ activeDataset, allDatasets = [], onQuarterChange, dete
       setCategoryValues(dashData.category_values || []);
       setCeoSummary(dashData.ceo_summary || '');
 
-      // Fetch all generated charts with AI selection
-      const chartsRes = await fetch(`${API}/api/generate-all-charts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filenames, quarter, category }),
-      });
-      
-      if (!chartsRes.ok) {
-        console.error(`Charts fetch error: ${chartsRes.status} ${chartsRes.statusText}`);
-        const errText = await chartsRes.text();
-        console.error('Charts error response:', errText);
-        return;
-      }
-      
-      const chartsData = await chartsRes.json();
-      console.log('Charts data received:', chartsData);
-
-      if (chartsData.charts?.length > 0) {
-        setAutoDashboard(chartsData.charts);
-      }
+      if (dashData.charts?.length > 0) setAutoDashboard(dashData.charts);
+      else setAutoDashboard([]);
     } catch (err) {
       console.error('fetchDashboard error:', err);
     } finally {

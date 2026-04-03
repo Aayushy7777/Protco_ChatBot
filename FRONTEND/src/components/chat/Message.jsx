@@ -42,52 +42,56 @@ const Message = ({ message, onRegenerate, isLast }) => {
             : 'bg-transparent text-slate-200'
         }`}
       >
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          className={`prose prose-invert max-w-none ${isUser ? 'prose-p:m-0' : 'prose-p:mb-4'}`}
-          components={{
-            code({ node, inline, className, children, ...props }) {
-              const match = /language-(\w+)/.exec(className || '');
-              return !inline && match ? (
-                <div className="bg-[#050505] border border-[#1E293B] rounded-lg my-3 overflow-hidden">
-                  <div className="bg-[#111111] px-4 py-1.5 text-xs text-slate-400 border-b border-[#1E293B]">
-                    {match[1]}
+        {isUser ? (
+          <div className="whitespace-pre-wrap">{content}</div>
+        ) : (
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            className="prose prose-invert max-w-none prose-p:mb-4"
+            components={{
+              code({ node, inline, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || '');
+                return !inline && match ? (
+                  <div className="bg-[#050505] border border-[#1E293B] rounded-lg my-3 overflow-hidden">
+                    <div className="bg-[#111111] px-4 py-1.5 text-xs text-slate-400 border-b border-[#1E293B]">
+                      {match[1]}
+                    </div>
+                    <pre className="p-4 overflow-x-auto text-sm text-slate-200">
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    </pre>
                   </div>
-                  <pre className="p-4 overflow-x-auto text-sm text-slate-200">
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  </pre>
-                </div>
-              ) : (
-                <code className="bg-[rgba(0,212,255,0.1)] text-[#00D4FF] px-1.5 py-0.5 rounded text-[13px] font-mono break-words" {...props}>
-                  {children}
-                </code>
-              );
-            },
-            h1({ children }) { return <h1 className="text-xl font-bold text-white mb-3 mt-4">{children}</h1>; },
-            h2({ children }) { return <h2 className="text-lg font-bold text-[#00D4FF] mb-3 mt-4">{children}</h2>; },
-            h3({ children }) { return <h3 className="text-base font-bold text-slate-200 mb-2 mt-3">{children}</h3>; },
-            ul({ children }) { return <ul className="list-disc pl-5 space-y-1.5 mb-4 text-slate-300">{children}</ul>; },
-            ol({ children }) { return <ol className="list-decimal pl-5 space-y-1.5 mb-4 text-slate-300">{children}</ol>; },
-            li({ children }) { return <li className="pl-1">{children}</li>; },
-            strong({ children }) { return <strong className="font-semibold text-white">{children}</strong>; },
-            table({ children }) {
-              return (
-                <div className="overflow-x-auto my-4 rounded-lg border border-[rgba(255,255,255,0.1)]">
-                  <table className="w-full text-sm text-left border-collapse">
+                ) : (
+                  <code className="bg-[rgba(0,212,255,0.1)] text-[#00D4FF] px-1.5 py-0.5 rounded text-[13px] font-mono break-words" {...props}>
                     {children}
-                  </table>
-                </div>
-              );
-            },
-            thead({ children }) { return <thead className="bg-[#111111] text-slate-300">{children}</thead>; },
-            th({ children }) { return <th className="px-4 py-2 border-b border-[rgba(255,255,255,0.1)] font-semibold">{children}</th>; },
-            td({ children }) { return <td className="px-4 py-2 border-b border-[rgba(255,255,255,0.05)] text-slate-300">{children}</td>; },
-          }}
-        >
-          {content}
-        </ReactMarkdown>
+                  </code>
+                );
+              },
+              h1({ children }) { return <h1 className="text-xl font-bold text-white mb-3 mt-4">{children}</h1>; },
+              h2({ children }) { return <h2 className="text-lg font-bold text-[#00D4FF] mb-3 mt-4">{children}</h2>; },
+              h3({ children }) { return <h3 className="text-base font-bold text-slate-200 mb-2 mt-3">{children}</h3>; },
+              ul({ children }) { return <ul className="list-disc pl-5 space-y-1.5 mb-4 text-slate-300">{children}</ul>; },
+              ol({ children }) { return <ol className="list-decimal pl-5 space-y-1.5 mb-4 text-slate-300">{children}</ol>; },
+              li({ children }) { return <li className="pl-1">{children}</li>; },
+              strong({ children }) { return <strong className="font-semibold text-white">{children}</strong>; },
+              table({ children }) {
+                return (
+                  <div className="overflow-x-auto my-4 rounded-lg border border-[rgba(255,255,255,0.1)]">
+                    <table className="w-full text-sm text-left border-collapse">
+                      {children}
+                    </table>
+                  </div>
+                );
+              },
+              thead({ children }) { return <thead className="bg-[#111111] text-slate-300">{children}</thead>; },
+              th({ children }) { return <th className="px-4 py-2 border-b border-[rgba(255,255,255,0.1)] font-semibold">{children}</th>; },
+              td({ children }) { return <td className="px-4 py-2 border-b border-[rgba(255,255,255,0.05)] text-slate-300">{children}</td>; },
+            }}
+          >
+            {content}
+          </ReactMarkdown>
+        )}
 
         {/* ── Actions (Copy / Regenerate) ── */}
         {!isUser && isLast && (

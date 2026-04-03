@@ -1,34 +1,14 @@
-fastapi==0.95.2
-uvicorn==0.21.0
-pandas
-numpy
-httpx==0.23.3
-pydantic==1.10.12
-python-multipart==0.0.5
-openpyxl==3.1.2
-xlrd==2.0.1
-
-# LLM & Embeddings
-ollama
-langchain==0.0.327
-huggingface-hub
-sentence-transformers
-
-# Vector Database
-chromadb==0.4.14
-
-# Agent Framework & Orchestration
+fastapi==0.111.0
+uvicorn==0.30.0
+python-multipart==0.0.9
+pandas==2.2.2
+numpy==1.26.4
+openpyxl==3.1.4
+langchain==0.2.6
+langchain-community==0.2.6
+langchain-ollama==0.1.1
+chromadb==0.5.4
+python-dotenv==1.0.1
+pydantic==2.7.4
 pydantic-settings==2.0.3
-
-# Utilities
-python-dotenv
-pyyaml
-tenacity
-typing-extensions
-
-# Logging & Monitoring
-python-json-logger
-
-# Testing
-pytest
-pytest-asyncio
+xlrd==2.0.1

@@ -1,6 +1,22 @@
-# Services package
-from app.services.embeddings import get_embeddings_service
-from app.services.rag_pipeline import get_rag_pipeline
-from app.services.openclaw_agent import get_agent
+"""
+Services package.
 
-__all__ = ["get_embeddings_service", "get_rag_pipeline", "get_agent"]
+Note: This file must stay import-safe. Do not import dead/legacy modules here,
+because importing `app.services.<module>` executes this package init.
+"""
+
+from app.services.agent import build_agent, parse_agent_response, register_dataframe
+from app.services.dashboard_gen import generate_dashboard
+from app.services.profiler import profile_dataframe, profile_to_prompt_context
+from app.services.rag import get_retriever, ingest_file
+
+__all__ = [
+    "build_agent",
+    "parse_agent_response",
+    "register_dataframe",
+    "generate_dashboard",
+    "profile_dataframe",
+    "profile_to_prompt_context",
+    "get_retriever",
+    "ingest_file",
+]

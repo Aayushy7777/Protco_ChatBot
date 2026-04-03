@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useDashboardStore } from '../store/dashboardStore';
 
-const API = 'http://localhost:8888';
+const API = 'http://localhost:8000/api';
 
 /**
  * Hook to fetch KPIs + auto-charts from /api/auto-dashboard.
@@ -25,7 +25,7 @@ export function useKPIs(filename, filters = null) {
     setError(null);
 
     try {
-      const response = await fetch(`${API}/api/auto-dashboard`, {
+      const response = await fetch(`${API}/auto-dashboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename, filters: filters || {} }),

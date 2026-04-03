@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useDashboardStore } from '../store/dashboardStore';
 
-const API = "http://localhost:8888";
+const API = "http://localhost:8000/api";
 
 export const useDashboardPersistence = () => {
   const {

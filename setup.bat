@@ -1,66 +1,69 @@
 @echo off
-REM Quick startup script for CSV Chat Agent v2.0 (Windows)
-
 setlocal enabledelayedexpansion
 
 echo.
-echo 🚀 CSV Chat Agent - Production Setup
-echo ====================================
+echo CSV Chat Agent - Setup (Windows)
+echo =================================
 echo.
 
-REM Check if BACKEND directory exists
-if not exist BACKEND (
-    echo ❌ Error: BACKEND directory not found.
-    echo    Please run this script from the project root.
-    pause
-    exit /b 1
+REM 1) Check if Python is installed
+python --version >nul 2>&1
+if errorlevel 1 (
+  echo ERROR: Python is not installed or not on PATH.
+  echo Install Python 3.11+ from: https://www.python.org/downloads/
+  pause
+  exit /b 1
 )
 
-REM Navigate to backend
-cd BACKEND
-
-echo 📦 Installing dependencies...
-echo    This may take 2-3 minutes on first run.
-echo.
-
-REM Check if virtual environment exists
-if not exist .venv (
-    echo 📝 Creating virtual environment...
-    python -m venv .venv
+REM 2) Create venv if not exists
+if not exist ".venv\Scripts\activate.bat" (
+  echo Creating virtual environment...
+  python -m venv .venv
 )
 
-REM Activate virtual environment
-echo ✅ Activating virtual environment...
-if exist .venv\Scripts\activate.bat (
-    call .venv\Scripts\activate.bat
-) else (
-    echo ❌ Could not activate virtual environment
-    pause
-    exit /b 1
+REM 3) Activate
+call .venv\Scripts\activate.bat
+if errorlevel 1 (
+  echo ERROR: Failed to activate .venv
+  pause
+  exit /b 1
 )
 
-REM Install dependencies
-echo 📥 Installing Python packages...
-python -m pip install --upgrade pip --quiet
-pip install -r requirements.txt --quiet
+REM 4) Install backend deps
+echo Installing backend dependencies...
+python -m pip install --upgrade pip
+pip install -r BACKEND\requirements.txt
+
+REM 5) Check if Ollama is installed
+ollama --version >nul 2>&1
+if errorlevel 1 (
+  echo ERROR: Ollama is not installed.
+  echo Download: https://ollama.com/download
+  pause
+  exit /b 1
+)
+
+REM 6) Pull required models
+echo Pulling Ollama models...
+ollama pull llama3.1
+ollama pull nomic-embed-text
+
+REM 7) Create backend folders
+mkdir BACKEND\data\raw 2>nul
+mkdir BACKEND\data\processed 2>nul
+
+REM 8) Create chroma store folder
+mkdir BACKEND\chroma_store 2>nul
 
 echo.
-echo ✅ Installation complete!
+echo Setup complete.
 echo.
-echo 📝 Configuration:
-echo    - .env file: BACKEND\.env
-echo    - Agent config: BACKEND\openclaw\agent_config.yaml
+echo Next steps (separate terminals):
+echo   1) Run Ollama: ollama serve
+echo   2) Run backend: cd BACKEND ^& uvicorn app.main:app --reload --port 8000
 echo.
-echo 🚀 Next steps:
-echo.
-echo Commands (run in separate terminals):
-echo   1. Terminal 1: ollama serve
-echo   2. Terminal 2: cd BACKEND ^& python -m uvicorn app.main:app --reload
-echo   3. Terminal 3 ^(optional^): python verify_setup.py
-echo.
-echo 📊 Access:
-echo    - API Docs: http://localhost:8000/docs
-echo    - Health:   http://localhost:8000/health
-echo    - Chat:     POST http://localhost:8000/api/chat
+echo Docs: http://localhost:8000/docs
+echo Health: http://localhost:8000/api/health
+
 echo.
 pause
