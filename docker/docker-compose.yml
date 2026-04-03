@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+  # Ollama LLM engine
+  ollama:
+    image: ollama/ollama:latest
+    container_name: csv-chat-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    networks:
+      - csv-chat-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # FastAPI backend
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: csv-chat-backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - LOG_LEVEL=INFO
+      - DEBUG=false
+      - VECTOR_STORE_TYPE=chroma
+    volumes:
+      - ./BACKEND/data:/app/data
+      - ./BACKEND/logs:/app/logs
+      - ./BACKEND/openclaw:/app/openclaw
+    networks:
+      - csv-chat-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: PostgreSQL for conversation history
+  # db:
+  #   image: postgres:15
+  #   container_name: csv-chat-db
+  #   environment:
+  #     - POSTGRES_USER=chatbot
+  #     - POSTGRES_PASSWORD=secure_password
+  #     - POSTGRES_DB=conversation_store
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - csv-chat-network
+
+networks:
+  csv-chat-network:
+    driver: bridge
+
+volumes:
+  ollama_data:
+  # postgres_data:

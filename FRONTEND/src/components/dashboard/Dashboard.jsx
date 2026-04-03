@@ -5,7 +5,7 @@ import ChartRenderer from './ChartRenderer';
 import KPICard from './KPICard';
 import { SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
-const API = 'http://localhost:8000';
+const API = 'http://localhost:8888';
 const CHART_COLORS = ['#00D4FF','#FF6B35','#7B2FBE','#00FF88','#FFD700','#FF3366','#4ECDC4','#45B7D1','#96CEB4'];
 
 const GM_NAVY    = '#0A0F2C';
@@ -413,21 +413,27 @@ const Dashboard = memo(({ activeDataset, allDatasets = [], onQuarterChange, dete
                           fontSize: 13,
                           fontWeight: 700,
                           margin: 0,
-                          marginBottom: 4,
+                          marginBottom: 8,
                           letterSpacing: 0.5,
                         }}>
                           {chart.title}
                         </h3>
+                        
+                        {/* Enhanced insight card */}
                         {chart.business_insight && (
-                          <p style={{
-                            color: 'rgba(255,255,255,0.45)',
-                            fontSize: 11,
-                            margin: 0,
-                            fontStyle: 'italic',
-                            lineHeight: 1.4,
+                          <div style={{
+                            background: "#4f46e510",
+                            border: "1px solid #4f46e530",
+                            borderLeft: "3px solid #4f46e5",
+                            borderRadius: "0 6px 6px 0",
+                            padding: "6px 10px",
+                            marginBottom: 10,
+                            fontSize: 11.5,
+                            color: "#a5b4fc",
+                            lineHeight: 1.5,
                           }}>
                             {chart.business_insight}
-                          </p>
+                          </div>
                         )}
                       </div>
 

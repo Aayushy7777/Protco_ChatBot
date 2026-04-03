@@ -11,7 +11,77 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 
-const API = "http://localhost:8000";
+const API = "http://localhost:8888";
+
+// ── Company Filter Sidebar Component ──
+function CompanyFilterSidebar({ companies, selected, onSelect }) {
+  const [search, setSearch] = useState("");
+  
+  const filtered = companies.filter(c =>
+    c.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div style={{
+      width: 220, flexShrink: 0,
+      borderRight: "1px solid #1e293b",
+      display: "flex", flexDirection: "column",
+      height: "100%", background: "#0a0f1a",
+    }}>
+      {/* Search box */}
+      <div style={{ padding: "10px 12px", borderBottom: "1px solid #1e293b" }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search company..."
+          style={{
+            width: "100%", padding: "6px 10px",
+            background: "#0a0f1a", border: "1px solid #1e293b",
+            borderRadius: 6, color: "#e2e8f0", fontSize: 12,
+          }}
+        />
+      </div>
+
+      {/* ALL button */}
+      <button
+        onClick={() => onSelect("ALL")}
+        style={{
+          margin: "8px 12px 4px",
+          padding: "6px 0", borderRadius: 6,
+          background: selected === "ALL" ? "#4f46e5" : "transparent",
+          border: "1px solid #1e293b",
+          color: selected === "ALL" ? "#fff" : "#64748b",
+          fontSize: 12, cursor: "pointer", fontWeight: 600,
+        }}>
+        All companies
+      </button>
+
+      {/* Scrollable list */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "4px 8px" }}>
+        {filtered.map(company => (
+          <button key={company}
+            onClick={() => onSelect(company)}
+            style={{
+              width: "100%", textAlign: "left",
+              padding: "7px 10px", marginBottom: 2,
+              background: selected === company ? "#4f46e51a" : "transparent",
+              border: "none",
+              borderLeft: selected === company ? "2px solid #4f46e5" : "2px solid transparent",
+              color: selected === company ? "#a5b4fc" : "#64748b",
+              fontSize: 11.5, cursor: "pointer", borderRadius: "0 4px 4px 0",
+            }}>
+            {company.replace(/^\d+\-/, "")}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ padding: "8px 12px", borderTop: "1px solid #1e293b",
+        fontSize: 10, color: "#334155" }}>
+        {filtered.length} companies
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [datasets, setDatasets] = useState([]);
@@ -137,263 +207,204 @@ export default function App() {
       color: "white",
       overflow: "hidden",
       position: "relative",
+      flexDirection: "column",
     }}>
-      {/* ── Main Dashboard Area ── */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", height: "100%", position: "relative" }}>
+      {/* ── Top bar: Upload button + file tabs ── */}
+      <div style={{
+        position: "relative",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 20,
+        display: "flex",
+        gap: 12,
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "12px 22px",
+        borderBottom: "1px solid rgba(255,255,255,0.1)",
+        background: "#0A0F2C",
+      }}>
+        <label className="flex items-center gap-2 px-4 py-2 bg-[#00D4FF] hover:bg-[#00b4db] text-[#0A0F2C] text-sm font-semibold rounded-lg cursor-pointer transition-colors shadow-[0_0_15px_rgba(0,212,255,0.3)]">
+          <ArrowUpTrayIcon style={{ width: 17, height: 17, color: "#0A0F2C" }} />
+          Upload CSV
+          <input
+            type="file"
+            multiple
+            accept=".csv,.xlsx,.xls"
+            style={{ display: "none" }}
+            onChange={handleFileUpload}
+          />
+        </label>
 
-        {/* ── Top bar: Upload button + file tabs ── */}
+        {/* ── File tabs selector ── */}
+        {datasets.length > 0 && (
+          <div style={{
+            display: "flex",
+            gap: 8,
+            overflowX: "auto",
+            paddingBottom: 4,
+            flex: 1,
+          }}>
+            {datasets.map((dataset) => {
+              const fileName = typeof dataset === 'string' ? dataset : dataset.name;
+              const isActive = fileName === activeDataset;
+              return (
+                <button
+                  key={fileName}
+                  onClick={() => {
+                    setActiveDataset(fileName);
+                    const q = detectQuarterFromFilename(fileName);
+                    if (q) {
+                      setActiveQuarter(q);
+                      setDetectedQuarter(q);
+                    }
+                    const convId = createConversation(fileName);
+                    setActiveConversation(convId);
+                  }}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    border: isActive ? `2px solid #00D4FF` : `1px solid rgba(255,255,255,0.2)`,
+                    background: isActive ? "rgba(0,212,255,0.15)" : "rgba(255,255,255,0.05)",
+                    color: isActive ? "#00D4FF" : "rgba(255,255,255,0.65)",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseOver={(e) => {
+                    if (!isActive) {
+                      e.target.style.background = "rgba(255,255,255,0.08)";
+                      e.target.style.borderColor = "rgba(0,212,255,0.4)";
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!isActive) {
+                      e.target.style.background = "rgba(255,255,255,0.05)";
+                      e.target.style.borderColor = "rgba(255,255,255,0.2)";
+                    }
+                  }}
+                >
+                  📄 {fileName}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {uploading && (
         <div style={{
           position: "absolute",
-          top: 18,
-          left: 22,
-          right: 22,
-          zIndex: 20,
+          inset: 0,
+          zIndex: 40,
+          background: "rgba(10,10,10,0.88)",
+          backdropFilter: "blur(6px)",
           display: "flex",
-          gap: 12,
+          flexDirection: "column",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: "center",
+          gap: 18,
+          top: "auto",
         }}>
-          <label className="flex items-center gap-2 px-4 py-2 bg-[#00D4FF] hover:bg-[#00b4db] text-[#0A0F2C] text-sm font-semibold rounded-lg cursor-pointer transition-colors shadow-[0_0_15px_rgba(0,212,255,0.3)]">
-            <ArrowUpTrayIcon style={{ width: 17, height: 17, color: "#0A0F2C" }} />
-            Upload CSV
-            <input
-              type="file"
-              multiple
-              accept=".csv,.xlsx,.xls"
-              style={{ display: "none" }}
-              onChange={handleFileUpload}
-            />
-          </label>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 border-4 border-[rgba(0,212,255,0.2)] border-t-[#00D4FF] rounded-full mx-auto mb-4"
+          />
+          <h2 style={{
+            fontSize: 22,
+            fontWeight: 700,
+            color: "#ffffff",
+            margin: 0,
+            textShadow: "0 0 12px #00D4FF",
+          }}>
+            Generating Dashboard…
+          </h2>
+          <p style={{ color: "rgba(255,255,255,0.45)", margin: 0, fontSize: 13 }}>
+            Analysing columns and building charts
+          </p>
+        </div>
+      )}
 
-          {/* ── File tabs selector ── */}
-          {datasets.length > 0 && (
-            <div style={{
-              display: "flex",
-              gap: 8,
-              overflowX: "auto",
-              paddingBottom: 4,
-              flex: 1,
+      <AnimatePresence>
+        {dashboardReadyMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            style={{
+              position: "absolute",
+              top: 70,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 50,
+              background: "#00D4FF",
+              color: "#0A0F2C",
+              padding: "8px 24px",
+              borderRadius: 999,
+              fontWeight: 800,
+              fontSize: 14,
+              boxShadow: "0 0 24px rgba(0,212,255,0.6)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            ✓ Dashboard Ready!
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Main body: 3-column layout ── */}
+      <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
+        
+        {/* Left: Company filter sidebar */}
+        <CompanyFilterSidebar
+          companies={datasets.map(d => typeof d === 'string' ? d : d.name)}
+          selected={activeDataset || "ALL"}
+          onSelect={(c) => {
+            if (c !== "ALL") setActiveDataset(c);
+          }}
+        />
+
+        {/* Center: Chat pane */}
+        <div style={{ width: 380, borderRight: "1px solid #1e293b", display: "flex", flexDirection: "column", background: "#0a0f1a" }}>
+          {activeDataset && (
+            <Chat 
+              dataset={activeDataset} 
+              conversationId={activeConversation}
+              onCreateConversation={handleCreateConversation}
+            />
+          )}
+        </div>
+
+        {/* Right: Dashboard */}
+        <div style={{ flex: 1, overflow: "auto" }}>
+          {activeDataset ? (
+            <Dashboard
+              activeDataset={activeDataset}
+              allDatasets={datasets}
+              detectedQuarter={detectedQuarter}
+              onQuarterChange={(q) => setActiveQuarter(q)}
+            />
+          ) : (
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              height: "100%",
+              fontSize: 16,
+              color: "#64748b",
             }}>
-              {datasets.map((dataset) => {
-                const fileName = typeof dataset === 'string' ? dataset : dataset.name;
-                const isActive = fileName === activeDataset;
-                return (
-                  <button
-                    key={fileName}
-                    onClick={() => {
-                      setActiveDataset(fileName);
-                      const q = detectQuarterFromFilename(fileName);
-                      if (q) {
-                        setActiveQuarter(q);
-                        setDetectedQuarter(q);
-                      }
-                      const convId = createConversation(fileName);
-                      setActiveConversation(convId);
-                    }}
-                    style={{
-                      padding: "6px 14px",
-                      borderRadius: 6,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      whiteSpace: "nowrap",
-                      border: isActive ? `2px solid #00D4FF` : `1px solid rgba(255,255,255,0.2)`,
-                      background: isActive ? "rgba(0,212,255,0.15)" : "rgba(255,255,255,0.05)",
-                      color: isActive ? "#00D4FF" : "rgba(255,255,255,0.65)",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseOver={(e) => {
-                      if (!isActive) {
-                        e.target.style.background = "rgba(255,255,255,0.08)";
-                        e.target.style.borderColor = "rgba(0,212,255,0.4)";
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (!isActive) {
-                        e.target.style.background = "rgba(255,255,255,0.05)";
-                        e.target.style.borderColor = "rgba(255,255,255,0.2)";
-                      }
-                    }}
-                  >
-                    📄 {fileName}
-                  </button>
-                );
-              })}
+              Upload a CSV or Excel file to get started
             </div>
           )}
         </div>
 
-        {uploading && (
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 40,
-            background: "rgba(10,10,10,0.88)",
-            backdropFilter: "blur(6px)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 18,
-          }}>
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="w-16 h-16 border-4 border-[rgba(0,212,255,0.2)] border-t-[#00D4FF] rounded-full mx-auto mb-4"
-            />
-            <h2 style={{
-              fontSize: 22,
-              fontWeight: 700,
-              color: "#ffffff",
-              margin: 0,
-              textShadow: "0 0 12px #00D4FF",
-            }}>
-              Generating Dashboard…
-            </h2>
-            <p style={{ color: "rgba(255,255,255,0.45)", margin: 0, fontSize: 13 }}>
-              Analysing columns and building charts
-            </p>
-          </div>
-        )}
-
-        <AnimatePresence>
-          {dashboardReadyMsg && (
-            <motion.div
-              initial={{ opacity: 0, y: -50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -50 }}
-              style={{
-                position: "absolute",
-                top: 20,
-                left: "50%",
-                transform: "translateX(-50%)",
-                zIndex: 50,
-                background: "#00D4FF",
-                color: "#0A0F2C",
-                padding: "8px 24px",
-                borderRadius: 999,
-                fontWeight: 800,
-                fontSize: 14,
-                boxShadow: "0 0 24px rgba(0,212,255,0.6)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              ✓ Dashboard Ready!
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div style={{ flex: 1, overflow: "hidden", paddingTop: 64 }}>
-          <Dashboard
-            activeDataset={activeDataset}
-            allDatasets={datasets}
-            detectedQuarter={detectedQuarter}
-            onQuarterChange={(q) => setActiveQuarter(q)}
-          />
-        </div>
-      </main>
-
-      <motion.button
-        whileHover={{ scale: 1.12 }}
-        whileTap={{ scale: 0.92 }}
-        onClick={() => setIsChatOpen(true)}
-        className="w-14 h-14 bg-[#00D4FF] border border-[#00b4db] text-[#0A0F2C] rounded-full shadow-[0_0_20px_rgba(0,212,255,0.4)] flex items-center justify-center hover:scale-105 transition-transform"
-        style={{
-          position: "fixed",
-          bottom: 28,
-          right: 28,
-          zIndex: 40,
-          cursor: "pointer",
-        }}
-        title="Open AI Chat"
-      >
-        <ChatBubbleLeftRightIcon style={{ width: 26, height: 26 }} />
-      </motion.button>
-
-      <AnimatePresence>
-        {isChatOpen && (
-          <>
-            <motion.div
-              key="backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsChatOpen(false)}
-              style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(0,0,0,0.55)",
-                zIndex: 40,
-                backdropFilter: "blur(3px)",
-              }}
-            />
-
-            <motion.div
-              key="panel"
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 26, stiffness: 200 }}
-              className="h-full bg-[#0A0F2C] border-l border-[rgba(0,212,255,0.3)] shadow-[-10px_0_30px_rgba(0,0,0,0.5)] flex flex-col relative z-50"
-              style={{
-                position: "fixed",
-                top: 0,
-                right: 0,
-                bottom: 0,
-                width: 400,
-                paddingTop: 48,
-              }}
-            >
-              <button
-                onClick={() => setIsChatOpen(false)}
-                title="Close chat"
-                className="p-1.5 rounded-md hover:bg-[rgba(0,212,255,0.1)] text-slate-400 hover:text-[#00D4FF] transition-colors"
-                style={{
-                  position: "absolute",
-                  top: 12,
-                  left: 14,
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  borderRadius: 6,
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                <XMarkIcon style={{ width: 20, height: 20 }} />
-              </button>
-
-              {/* Panel header */}
-              <div style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 48,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderBottom: "1px solid rgba(0,212,255,0.15)",
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#00D4FF",
-                letterSpacing: 1,
-              }}>
-                AI Chat Assistant
-              </div>
-
-              <div style={{ flex: 1, overflow: "hidden" }}>
-                <Chat
-                  activeDataset={activeDataset}
-                  activeConversation={activeConversation}
-                  onCreateConversation={handleCreateConversation}
-                  activeQuarter={activeQuarter}
-                  activeCategory={activeCategory}
-                />
-              </div>
-            </motion.div>
-          </>
-        )}
+      </div>
+    </div>
+  );
+}
       </AnimatePresence>
     </div>
   );

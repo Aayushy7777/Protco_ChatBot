@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useDashboardStore } from '../store/dashboardStore';
 
-const API = 'http://localhost:8000';
+const API = 'http://localhost:8888';
 
 /**
  * Hook to fetch KPIs + auto-charts from /api/auto-dashboard.

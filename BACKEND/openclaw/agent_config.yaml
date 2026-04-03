@@ -1,0 +1,121 @@
+# OpenClaw Agent Configuration
+# Production-grade agent orchestrator for CSV analysis
+
+agent:
+  name: csv_chat_agent
+  description: "High-precision AI agent for CSV data analysis with RAG support"
+  version: "2.0.0"
+
+# LLM Configuration
+llm:
+  provider: ollama
+  base_url: http://localhost:11434
+  models:
+    intent_classifier: mistral:7b
+    chat: llama3.1:8b
+    chart_generation: qwen2.5:7b
+    summary: llama3.1:8b
+  defaults:
+    temperature:
+      intent: 0.0  # Deterministic
+      chart: 0.0   # Deterministic JSON
+      chat: 0.6    # Creative
+      summary: 0.3 # Moderate
+
+# Tool Configuration
+tools:
+  enabled:
+    - retriever_tool
+    - csv_processor_tool
+    - aggregation_tool
+  
+  retriever_tool:
+    type: rag_retrieval
+    max_results: 5
+    similarity_threshold: 0.3
+    description: "Retrieve relevant CSV data and context using RAG"
+  
+  csv_processor_tool:
+    type: data_processor
+    description: "Process, filter, and aggregate CSV data"
+  
+  aggregation_tool:
+    type: analytics
+    description: "Generate statistics and aggregations"
+
+# Memory Configuration
+memory:
+  type: buffer
+  max_turns: 20
+  persistence: false
+  session_timeout_minutes: 60
+
+# RAG Configuration
+rag:
+  enabled: true
+  vector_store:
+    type: chromadb
+    persist: true
+    similarity_metric: cosine
+  embeddings:
+    model: sentence-transformers/all-MiniLM-L6-v2
+    batch_size: 32
+  chunking:
+    chunk_size: 500
+    chunk_overlap: 50
+
+# Intent Classification Rules
+intent_routing:
+  CHART:
+    keywords:
+      - trend
+      - pattern
+      - distribution
+      - analyze
+      - chart
+      - graph
+      - visualize
+  
+  TABLE:
+    keywords:
+      - show data
+      - display
+      - raw data
+      - view table
+  
+  STATS:
+    keywords:
+      - total
+      - average
+      - sum
+      - count
+      - statistics
+      - metrics
+  
+  DASHBOARD:
+    keywords:
+      - dashboard
+      - overview
+      - summary
+      - all metrics
+  
+  CHAT:
+    default: true
+
+# Monitoring & Logging
+monitoring:
+  enabled: true
+  log_level: INFO
+  log_format: json
+  metrics:
+    - response_time
+    - token_usage
+    - retrieval_score
+    - user_satisfaction
+
+# Performance Tuning
+performance:
+  max_concurrent_requests: 10
+  request_timeout_seconds: 60
+  embedding_cache_enabled: true
+  vector_store_batch_insert: true

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { useDashboardStore } from '../store/dashboardStore';
 
-const API = "http://localhost:8000";
+const API = "http://localhost:8888";
 
 export const useChat = (activeDataset, activeConversation, activeQuarter = 'All', activeCategory = 'All') => {
   const [loading, setLoading] = useState(false);
