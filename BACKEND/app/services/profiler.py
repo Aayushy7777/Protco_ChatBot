@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_datetime64_any_dtype, is_numeric_dtype
 
 
 def _safe_json_value(v: Any) -> Any:
@@ -94,10 +95,18 @@ def profile_dataframe(df: pd.DataFrame, filename: str) -> Dict[str, Any]:
     date_columns: Dict[str, Any] = {}
 
     # Detect dates first (so we can exclude them from other types).
+    # IMPORTANT: Do not attempt to parse numeric columns as dates, because
+    # `pd.to_datetime(123)` becomes a 1970 timestamp and causes misclassification.
     date_candidates: List[Tuple[str, pd.Series, pd.Series]] = []
     for col in columns:
         s = df[col]
-        parsed = pd.to_datetime(s, errors="coerce", infer_datetime_format=True)
+        # Only consider date parsing for non-numeric columns (strings/objects) or actual datetime dtypes.
+        if is_numeric_dtype(s):
+            continue
+        if is_datetime64_any_dtype(s):
+            parsed = pd.to_datetime(s, errors="coerce")
+        else:
+            parsed = pd.to_datetime(s.astype(str), errors="coerce", infer_datetime_format=True)
         non_null = int(s.notna().sum())
         parsed_non_null = int(parsed.notna().sum())
         if non_null == 0:
@@ -247,7 +256,7 @@ def profile_to_prompt_context(profile: Dict[str, Any]) -> str:
     dates = profile.get("date_columns", {}) or {}
 
     lines.append("")
-    lines.append("Numeric columns:")
+    lines.append("Numeric columns (use these for sums/averages):")
     if numeric:
         for col, stats in numeric.items():
             lines.append(
@@ -259,7 +268,7 @@ def profile_to_prompt_context(profile: Dict[str, Any]) -> str:
         lines.append("- (none)")
 
     lines.append("")
-    lines.append("Categorical columns:")
+    lines.append("Categorical columns (grouping dimensions like customer, category, status):")
     if categorical:
         for col, stats in categorical.items():
             top_vals = stats.get("top_10_values", {}) or {}

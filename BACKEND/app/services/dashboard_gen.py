@@ -96,18 +96,7 @@ def generate_dashboard(df: pd.DataFrame, profile: Dict[str, Any]) -> List[Dict[s
         other_numeric = next((c for c in numeric_cols if c != revenue_col), None)
 
         configs: List[Dict[str, Any]] = []
-        # 1) Area: date + revenue
-        if pick_date and revenue_col:
-            configs.append({
-                "type": "area",
-                "title": "Revenue Trend",
-                "xKey": pick_date,
-                "yKey": revenue_col,
-                "chartStyle": "area",
-                "insight": "Track how revenue changes over time.",
-                "priority": 1,
-            })
-        # 2) Bar horizontal: category/client + revenue
+        # 1) Bar horizontal: category/client + revenue
         if pick_cat and revenue_col:
             configs.append({
                 "type": "bar",
@@ -116,9 +105,9 @@ def generate_dashboard(df: pd.DataFrame, profile: Dict[str, Any]) -> List[Dict[s
                 "yKey": revenue_col,
                 "chartStyle": "horizontal",
                 "insight": "Identify the highest contributing clients.",
-                "priority": 2,
+                "priority": 1,
             })
-        # 3) Pie: category share
+        # 2) Pie: category share
         if pick_cat and revenue_col:
             configs.append({
                 "type": "pie",
@@ -127,18 +116,7 @@ def generate_dashboard(df: pd.DataFrame, profile: Dict[str, Any]) -> List[Dict[s
                 "yKey": revenue_col,
                 "chartStyle": "pie",
                 "insight": "See how revenue is distributed across top groups.",
-                "priority": 3,
-            })
-        # 4) Scatter: two numerics
-        if other_numeric and revenue_col:
-            configs.append({
-                "type": "scatter",
-                "title": "Revenue vs Another Metric",
-                "xKey": other_numeric,
-                "yKey": revenue_col,
-                "chartStyle": "scatter",
-                "insight": "Understand correlation between revenue and another metric.",
-                "priority": 4,
+                "priority": 2,
             })
 
         # Add simple alternates to reach 6.
