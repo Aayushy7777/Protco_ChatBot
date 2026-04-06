@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Dashboard Generator</title>
+  <style>
+    :root{
+      --bg:#0f1117;
+      --card:#1a1d2e;
+      --border:#2d3748;
+      --accent:#4f46e5;
+      --text:#e2e8f0;
+      --muted:#64748b;
+      --green:#34d399;
+      --red:#f87171;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      background:var(--bg);
+      color:var(--text);
+      font-family:'Segoe UI',system-ui,sans-serif;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .card{
+      width:100%;
+      max-width:480px;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:22px;
+    }
+    h1{font-size:22px;margin-bottom:6px}
+    .sub{color:var(--muted);font-size:13px;line-height:1.4;margin-bottom:14px}
+    .status{
+      display:flex;align-items:center;gap:8px;
+      padding:10px 12px;border:1px solid var(--border);
+      border-radius:10px;background:#0f172a;
+      margin-bottom:14px;font-size:12px;color:var(--muted)
+    }
+    .dot{width:10px;height:10px;border-radius:50%}
+    .dot.green{background:var(--green)}
+    .dot.red{background:var(--red)}
+    .zone{
+      border:2px dashed var(--border);
+      border-radius:14px;
+      padding:22px;
+      text-align:center;
+      cursor:pointer;
+      transition:all .15s;
+      background:transparent;
+    }
+    .zone:hover{border-color:var(--accent)}
+    .zone strong{display:block;margin-bottom:6px}
+    .zone small{color:var(--muted)}
+    input[type=file]{display:none}
+    .msg{margin-top:12px;font-size:12px;color:var(--muted);min-height:18px}
+    .ok{color:var(--green)}
+    .err{color:var(--red)}
+    .spinner{
+      display:inline-block;width:12px;height:12px;
+      border:2px solid var(--muted);
+      border-top-color:var(--accent);
+      border-radius:50%;
+      animation:spin .8s linear infinite;
+      vertical-align:-2px;margin-right:6px;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .links{margin-top:14px;display:flex;justify-content:space-between;gap:10px}
+    a{color:#a5b4fc;text-decoration:none;font-size:12px}
+    a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>AI Dashboard Generator</h1>
+    <div class="sub">Upload any CSV or Excel file — dashboard and chatbot generated automatically.</div>
+
+    <div class="status" id="ollamaStatus">
+      <span class="dot red" id="ollamaDot"></span>
+      <span id="ollamaText">Checking Ollama…</span>
+    </div>
+
+    <label class="zone" id="dropZone">
+      <input id="fileInput" type="file" accept=".csv,.xlsx,.xls"/>
+      <strong id="zoneTitle">Drop file here or click to upload</strong>
+      <small>.csv .xlsx .xls supported</small>
+    </label>
+
+    <div class="msg" id="msg"></div>
+
+    <div class="links">
+      <a href="/dashboard">View current dashboard →</a>
+      <a href="/docs">API Docs</a>
+    </div>
+  </div>
+
+  <script>
+    const msgEl = document.getElementById('msg');
+    const fileInput = document.getElementById('fileInput');
+    const zoneTitle = document.getElementById('zoneTitle');
+    const dropZone = document.getElementById('dropZone');
+
+    async function refreshOllamaStatus(){
+      try{
+        const r = await fetch('/api/health', {cache:'no-store'});
+        const d = await r.json();
+        const ok = !!d.ollama;
+        document.getElementById('ollamaDot').className = 'dot ' + (ok ? 'green':'red');
+        document.getElementById('ollamaText').textContent = ok
+          ? `Ollama ready (${d.model || 'llama3.1'})`
+          : `Ollama offline — run: ollama serve`;
+      }catch(e){
+        document.getElementById('ollamaDot').className = 'dot red';
+        document.getElementById('ollamaText').textContent = 'Ollama status unavailable';
+      }
+    }
+
+    function setMsg(html, cls){
+      msgEl.className = 'msg ' + (cls || '');
+      msgEl.innerHTML = html;
+    }
+
+    async function uploadFile(file){
+      if(!file) return;
+      zoneTitle.textContent = file.name;
+      setMsg('<span class="spinner"></span>Uploading…', '');
+      const form = new FormData();
+      form.append('file', file);
+      try{
+        const r = await fetch('/upload', {method:'POST', body:form});
+        const d = await r.json();
+        if(!r.ok || !d.success){
+          setMsg('✗ ' + (d.error || 'Upload failed'), 'err');
+          return;
+        }
+        setMsg(`✓ ${d.rows} rows loaded`, 'ok');
+        setTimeout(() => location.href = '/dashboard', 1000);
+      }catch(e){
+        setMsg('✗ ' + e.message, 'err');
+      }
+    }
+
+    fileInput.addEventListener('change', e => uploadFile(e.target.files[0]));
+
+    ;['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => {
+      e.preventDefault(); e.stopPropagation();
+      dropZone.style.borderColor = '#4f46e5';
+    }));
+    ;['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => {
+      e.preventDefault(); e.stopPropagation();
+      dropZone.style.borderColor = '#2d3748';
+    }));
+    dropZone.addEventListener('drop', e => {
+      const f = e.dataTransfer.files && e.dataTransfer.files[0];
+      uploadFile(f);
+    });
+
+    refreshOllamaStatus();
+  </script>
+</body>
+</html>
+
