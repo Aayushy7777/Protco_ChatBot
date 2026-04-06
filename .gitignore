@@ -94,3 +94,10 @@ test_results.txt
 # Large files
 *.psd
 *.zip
+
+# Markdown files
+*.md
+
+# mission-control repos
+mission-control/
+mission-control-tasks/
