@@ -37,7 +37,7 @@ const ChatInput = ({ onSendMessage, isLoading, onStop, streaming }) => {
   };
 
   return (
-    <div className="bg-[#0A0F2C] px-4 py-4 w-full max-w-4xl mx-auto">
+    <div className="bg-[#0B0F1A] px-4 py-4 w-full max-w-4xl mx-auto">
       <AnimatePresence>
         {showSuggestions && !isLoading && (
           <motion.div

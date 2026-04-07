@@ -66,7 +66,7 @@ const Chat = ({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: '#0A0F2C',
+        background: '#0B0F1A',
       }}
     >
       {/* ── Memory bar ── */}
@@ -75,7 +75,7 @@ const Chat = ({
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '6px 14px',
-        borderBottom: '1px solid rgba(0,212,255,0.1)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
         flexShrink: 0,
       }}>
         <span style={{ fontSize: 10, color: 'rgba(0,212,255,0.5)', letterSpacing: 0.5 }}>

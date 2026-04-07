@@ -33,7 +33,7 @@ const MessageList = memo(({ messages, isLoading, streaming, onRegenerate }) => {
   }, [messages, isLoading, streaming]);
 
   return (
-    <div className="flex-1 overflow-y-auto overscroll-none px-4 py-6 bg-[#0A0F2C]">
+    <div className="flex-1 overflow-y-auto overscroll-none px-4 py-6 bg-[#0B0F1A]">
       {messages.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, y: 10 }}

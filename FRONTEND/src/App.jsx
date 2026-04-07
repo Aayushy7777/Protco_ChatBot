@@ -3,160 +3,37 @@ import { motion, AnimatePresence } from "framer-motion";
 import Chat from "./components/chat/Chat";
 import Dashboard from "./components/dashboard/Dashboard";
 import { useChatStore } from "./store/chatStore";
-import { useDashboardStore } from "./store/dashboardStore";
-import {
-  ChatBubbleLeftRightIcon,
-  SparklesIcon,
-  ArrowUpTrayIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
+import { ArrowUpTrayIcon } from "@heroicons/react/24/outline";
 
 const API = "http://localhost:8000/api";
-
-// ── File Info Banner Component ──
-function FileInfoBanner({ fileMetadata }) {
-  const auto = fileMetadata?.auto_detected || {};
-  if (!auto.domain) return null;
-
-  const formatCr = (n) => {
-    if (n >= 1e7) return (n / 1e7).toFixed(2) + " Cr";
-    if (n >= 1e5) return (n / 1e5).toFixed(2) + " L";
-    return n.toLocaleString("en-IN");
-  };
-
-  const formatPeriod = (tp) => {
-    if (!tp) return null;
-    if (typeof tp === "string") return tp;
-    if (typeof tp === "object") {
-      const min = tp.min ?? "";
-      const max = tp.max ?? "";
-      if (min && max) return `${min} - ${max}`;
-      return String(min || max || "");
-    }
-    return String(tp);
-  };
-
-  return (
-    <div style={{
-      display: "flex", gap: 16, padding: "8px 14px",
-      borderBottom: "1px solid #1e293b",
-      background: "#0a0f1a", flexWrap: "wrap",
-    }}>
-      {auto.domain && (
-        <Chip label="Type" value={auto.domain} />
-      )}
-      {auto.time_period && (
-        <Chip label="Period" value={formatPeriod(auto.time_period)} />
-      )}
-      {auto.total_revenue && auto.revenue_column && (
-        <Chip
-          label={auto.revenue_column}
-          value={"₹" + formatCr(auto.total_revenue)}
-        />
-      )}
-      {auto.total_clients && auto.client_column && (
-        <Chip
-          label={auto.client_column}
-          value={auto.total_clients + " unique"}
-        />
-      )}
-    </div>
-  );
-}
-
-function Chip({ label, value }) {
-  return (
-    <div style={{ fontSize: 11 }}>
-      <span style={{ color: "#475569" }}>{label}: </span>
-      <span style={{ color: "#a5b4fc", fontWeight: 500 }}>{value}</span>
-    </div>
-  );
-}
-
-// ── Company Filter Sidebar Component ──
-function CompanyFilterSidebar({ companies, selected, onSelect }) {
-  const [search, setSearch] = useState("");
-  
-  const filtered = companies.filter(c =>
-    c.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div style={{
-      width: 220, flexShrink: 0,
-      borderRight: "1px solid #1e293b",
-      display: "flex", flexDirection: "column",
-      height: "100%", background: "#0a0f1a",
-    }}>
-      {/* Search box */}
-      <div style={{ padding: "10px 12px", borderBottom: "1px solid #1e293b" }}>
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search company..."
-          style={{
-            width: "100%", padding: "6px 10px",
-            background: "#0a0f1a", border: "1px solid #1e293b",
-            borderRadius: 6, color: "#e2e8f0", fontSize: 12,
-          }}
-        />
-      </div>
-
-      {/* ALL button */}
-      <button
-        onClick={() => onSelect("ALL")}
-        style={{
-          margin: "8px 12px 4px",
-          padding: "6px 0", borderRadius: 6,
-          background: selected === "ALL" ? "#4f46e5" : "transparent",
-          border: "1px solid #1e293b",
-          color: selected === "ALL" ? "#fff" : "#64748b",
-          fontSize: 12, cursor: "pointer", fontWeight: 600,
-        }}>
-        All companies
-      </button>
-
-      {/* Scrollable list */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "4px 8px" }}>
-        {filtered.map(company => (
-          <button key={company}
-            onClick={() => onSelect(company)}
-            style={{
-              width: "100%", textAlign: "left",
-              padding: "7px 10px", marginBottom: 2,
-              background: selected === company ? "#4f46e51a" : "transparent",
-              border: "none",
-              borderLeft: selected === company ? "2px solid #4f46e5" : "2px solid transparent",
-              color: selected === company ? "#a5b4fc" : "#64748b",
-              fontSize: 11.5, cursor: "pointer", borderRadius: "0 4px 4px 0",
-            }}>
-            {company.replace(/^\d+\-/, "")}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ padding: "8px 12px", borderTop: "1px solid #1e293b",
-        fontSize: 10, color: "#334155" }}>
-        {filtered.length} companies
-      </div>
-    </div>
-  );
-}
 
 export default function App() {
   const [datasets, setDatasets] = useState([]);
   const [activeDataset, setActiveDataset] = useState(null);
-  const [fileMetadata, setFileMetadata] = useState(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [dashboardReadyMsg, setDashboardReadyMsg] = useState(false);
+  const [backendStatus, setBackendStatus] = useState("checking");
 
   const {
-    conversations,
     activeConversation,
     createConversation,
     setActiveConversation,
   } = useChatStore();
+
+  // Health check
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch(`${API}/health`);
+        if (res.ok) setBackendStatus("connected");
+        else setBackendStatus("error");
+      } catch {
+        setBackendStatus("error");
+      }
+    };
+    check();
+    const interval = setInterval(check, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     fetchDatasets();
@@ -199,17 +76,9 @@ export default function App() {
 
       const firstName = files[0].name;
       setActiveDataset(firstName);
-      
-      // Capture auto-detected metadata from upload response
-      if (data.uploaded && data.uploaded[0]) {
-        setFileMetadata(data.uploaded[0]);
-      }
-
       const convId = createConversation(firstName);
       setActiveConversation(convId);
       setUploading(false);
-      setDashboardReadyMsg(true);
-      setTimeout(() => setDashboardReadyMsg(false), 3000);
       fetchDatasets();
     } catch (err) {
       console.error("Upload error:", err);
@@ -227,205 +96,142 @@ export default function App() {
     return null;
   }, [activeDataset, createConversation, setActiveConversation]);
 
+  const handleSelectDataset = (fileName) => {
+    setActiveDataset(fileName);
+    const convId = createConversation(fileName);
+    setActiveConversation(convId);
+  };
+
   return (
-    <div style={{
-      display: "flex",
-      height: "100vh",
-      background: "#0A0F2C",
-      color: "white",
-      overflow: "hidden",
-      position: "relative",
-      flexDirection: "column",
-    }}>
-      {/* ── Top bar: Upload button + file tabs ── */}
-      <div style={{
-        position: "relative",
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 20,
-        display: "flex",
-        gap: 12,
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "12px 22px",
-        borderBottom: "1px solid rgba(255,255,255,0.1)",
-        background: "#0A0F2C",
-      }}>
-        <label className="flex items-center gap-2 px-4 py-2 bg-[#00D4FF] hover:bg-[#00b4db] text-[#0A0F2C] text-sm font-semibold rounded-lg cursor-pointer transition-colors shadow-[0_0_15px_rgba(0,212,255,0.3)]">
-          <ArrowUpTrayIcon style={{ width: 17, height: 17, color: "#0A0F2C" }} />
-          Upload CSV
-          <input
-            type="file"
-            multiple
-            accept=".csv,.xlsx,.xls"
-            style={{ display: "none" }}
-            onChange={handleFileUpload}
-          />
-        </label>
-
-        {/* ── File tabs selector ── */}
-        {datasets.length > 0 && (
-          <div style={{
-            display: "flex",
-            gap: 8,
-            overflowX: "auto",
-            paddingBottom: 4,
-            flex: 1,
-          }}>
-            {datasets.map((dataset) => {
-              const fileName = typeof dataset === 'string' ? dataset : dataset.name;
-              const isActive = fileName === activeDataset;
-              return (
-                <button
-                  key={fileName}
-                  onClick={() => {
-                    setActiveDataset(fileName);
-                    const convId = createConversation(fileName);
-                    setActiveConversation(convId);
-                  }}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: 6,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    whiteSpace: "nowrap",
-                    border: isActive ? `2px solid #00D4FF` : `1px solid rgba(255,255,255,0.2)`,
-                    background: isActive ? "rgba(0,212,255,0.15)" : "rgba(255,255,255,0.05)",
-                    color: isActive ? "#00D4FF" : "rgba(255,255,255,0.65)",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseOver={(e) => {
-                    if (!isActive) {
-                      e.target.style.background = "rgba(255,255,255,0.08)";
-                      e.target.style.borderColor = "rgba(0,212,255,0.4)";
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (!isActive) {
-                      e.target.style.background = "rgba(255,255,255,0.05)";
-                      e.target.style.borderColor = "rgba(255,255,255,0.2)";
-                    }
-                  }}
-                >
-                  📄 {fileName}
-                </button>
-              );
-            })}
+    <div className="flex flex-col h-screen bg-[#0B0F1A] text-white overflow-hidden">
+      {/* ── Header ── */}
+      <header className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-[#0B0F1A] flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[15px] font-semibold tracking-tight text-white/90">
+            CSV Chat Agent
+          </h1>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06]">
+            <div className={`w-1.5 h-1.5 rounded-full ${
+              backendStatus === "connected" ? "bg-emerald-400" :
+              backendStatus === "error" ? "bg-red-400" : "bg-yellow-400 animate-pulse"
+            }`} />
+            <span className="text-[10px] text-white/40 font-medium">
+              {backendStatus === "connected" ? "Connected" :
+               backendStatus === "error" ? "Disconnected" : "Checking..."}
+            </span>
           </div>
-        )}
-      </div>
-
-      {/* ── Auto-detected file info banner ── */}
-      <FileInfoBanner fileMetadata={fileMetadata} />
-
-      {uploading && (
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 40,
-          background: "rgba(10,10,10,0.88)",
-          backdropFilter: "blur(6px)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 18,
-          top: "auto",
-        }}>
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-[rgba(0,212,255,0.2)] border-t-[#00D4FF] rounded-full mx-auto mb-4"
-          />
-          <h2 style={{
-            fontSize: 22,
-            fontWeight: 700,
-            color: "#ffffff",
-            margin: 0,
-            textShadow: "0 0 12px #00D4FF",
-          }}>
-            Generating Dashboard…
-          </h2>
-          <p style={{ color: "rgba(255,255,255,0.45)", margin: 0, fontSize: 13 }}>
-            Analysing columns and building charts
-          </p>
         </div>
-      )}
 
+        <div className="flex items-center gap-3">
+          {/* File selector chips */}
+          {datasets.length > 0 && (
+            <div className="flex gap-1.5 overflow-x-auto max-w-md">
+              {datasets.map((dataset) => {
+                const fileName = typeof dataset === "string" ? dataset : dataset.name;
+                const isActive = fileName === activeDataset;
+                return (
+                  <button
+                    key={fileName}
+                    onClick={() => handleSelectDataset(fileName)}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-all ${
+                      isActive
+                        ? "bg-indigo-500/15 text-indigo-400 border border-indigo-500/30"
+                        : "bg-white/[0.03] text-white/40 border border-white/[0.06] hover:text-white/60 hover:border-white/10"
+                    }`}
+                  >
+                    {fileName}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <label className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-[12px] font-medium rounded-lg cursor-pointer transition-colors">
+            <ArrowUpTrayIcon className="w-3.5 h-3.5" />
+            Upload
+            <input
+              type="file"
+              multiple
+              accept=".csv,.xlsx,.xls"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+          </label>
+        </div>
+      </header>
+
+      {/* ── Upload overlay ── */}
       <AnimatePresence>
-        {dashboardReadyMsg && (
+        {uploading && (
           <motion.div
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            style={{
-              position: "absolute",
-              top: 70,
-              left: "50%",
-              transform: "translateX(-50%)",
-              zIndex: 50,
-              background: "#00D4FF",
-              color: "#0A0F2C",
-              padding: "8px 24px",
-              borderRadius: 999,
-              fontWeight: 800,
-              fontSize: 14,
-              boxShadow: "0 0 24px rgba(0,212,255,0.6)",
-              whiteSpace: "nowrap",
-            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
           >
-            ✓ Dashboard Ready!
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              className="w-10 h-10 border-2 border-white/10 border-t-indigo-400 rounded-full"
+            />
+            <p className="text-sm text-white/70 font-medium">Processing file...</p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Main body: 3-column layout ── */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
-        
-        {/* Left: Company filter sidebar */}
-        <CompanyFilterSidebar
-          companies={datasets.map(d => typeof d === 'string' ? d : d.name)}
-          selected={activeDataset || "ALL"}
-          onSelect={(c) => {
-            if (c !== "ALL") setActiveDataset(c);
-          }}
-        />
-
-        {/* Center: Chat pane */}
-        <div style={{ width: 380, borderRight: "1px solid #1e293b", display: "flex", flexDirection: "column", background: "#0a0f1a" }}>
-          {activeDataset && (
-            <Chat 
-              activeDataset={activeDataset} 
-              activeConversation={activeConversation}
-              onCreateConversation={handleCreateConversation}
-            />
-          )}
-        </div>
-
-        {/* Right: Dashboard */}
-        <div style={{ flex: 1, overflow: "auto" }}>
+      {/* ── Main: Left 70% Data | Right 30% Chat ── */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left: Data + Visualization */}
+        <div className="w-[70%] overflow-y-auto border-r border-white/[0.06]">
           {activeDataset ? (
             <Dashboard
               activeDataset={activeDataset}
               allDatasets={datasets}
             />
           ) : (
-            <div style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center", 
-              height: "100%",
-              fontSize: 16,
-              color: "#64748b",
-            }}>
-              Upload a CSV or Excel file to get started
-            </div>
+            <EmptyState onUpload={() => document.querySelector('input[type="file"]')?.click()} />
           )}
         </div>
 
+        {/* Right: AI Chat */}
+        <div className="w-[30%] flex flex-col min-w-[320px] bg-[#0B0F1A]">
+          {activeDataset ? (
+            <Chat
+              activeDataset={activeDataset}
+              activeConversation={activeConversation}
+              onCreateConversation={handleCreateConversation}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center px-6">
+              <p className="text-sm text-white/25 text-center leading-relaxed">
+                Ask something about your data...
+              </p>
+            </div>
+          )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function EmptyState({ onUpload }) {
+  return (
+    <div className="h-full flex flex-col items-center justify-center gap-5">
+      <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
+        <ArrowUpTrayIcon className="w-7 h-7 text-white/20" />
+      </div>
+      <div className="text-center">
+        <h2 className="text-lg font-semibold text-white/70 mb-1">No data uploaded</h2>
+        <p className="text-sm text-white/30 max-w-xs">
+          Upload a CSV or Excel file to generate insights and start chatting with your data.
+        </p>
+      </div>
+      <button
+        onClick={onUpload}
+        className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors"
+      >
+        Upload File
+      </button>
     </div>
   );
 }

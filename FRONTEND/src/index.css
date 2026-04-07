@@ -30,10 +30,10 @@ html {
 body {
   font-family: var(--sans);
   color: var(--text);
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  background-attachment: fixed;
+  background: #0B0F1A;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  margin: 0;
 }
 
 #root {
