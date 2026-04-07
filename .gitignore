@@ -106,6 +106,10 @@ SECURE_SYSTEM.ps1
 *.credentials
 *.secrets
 
-# mission-control repos
-mission-control/
+# mission-control repos (but keep database)
+mission-control/node_modules/
+mission-control/.next/
+mission-control/.env
+mission-control/dist/
+mission-control/build/
 mission-control-tasks/
