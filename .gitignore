@@ -100,6 +100,12 @@ test_*.py
 test_*.csv
 tmp_*.csv
 
+# Security & credentials (never commit)
+SECURE_SYSTEM.bat
+SECURE_SYSTEM.ps1
+*.credentials
+*.secrets
+
 # mission-control repos
 mission-control/
 mission-control-tasks/
