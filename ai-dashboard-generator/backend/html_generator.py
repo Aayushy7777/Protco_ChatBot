@@ -120,7 +120,7 @@ def generate_html(profile: Dict[str, Any], charts: List[Dict[str, Any]], kpis: L
         <h2 style="margin:0">{_esc(profile.get("filename","Dashboard"))}</h2>
         <div class="sub">{profile.get("rows",0)} records · {len(columns)} columns</div>
       </div>
-      <div class="sub">Powered by Ollama llama3.1</div>
+      <div class="sub">Powered by Ollama · {_esc(profile.get("model","qwen2.5:7b"))}</div>
     </div>
 
     <div class="kpis">{kpis_html}</div>

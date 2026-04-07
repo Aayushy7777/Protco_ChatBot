@@ -60,7 +60,7 @@ def _map_to_frontend_fields(cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 def generate_dashboard(df: pd.DataFrame, profile: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
-    Generate 6 chart configs, then enrich each with actual data from df.
+    Generate 4 diverse chart configs, then enrich each with actual data from df.
     """
     def _pick_numeric_columns(min_ratio: float = 0.6, max_cols: int = 3) -> List[str]:
         numeric_candidates: List[tuple[str, float]] = []
@@ -82,7 +82,11 @@ def generate_dashboard(df: pd.DataFrame, profile: Dict[str, Any]) -> List[Dict[s
         date_cols = list((profile.get("date_columns") or {}).keys())
         cat_cols = list((profile.get("categorical_columns") or {}).keys())
 
-        revenue_col = revenue_col if revenue_col in df.columns else (date_cols[0] if date_cols else None)
+        revenue_col = revenue_col if revenue_col in df.columns else None
+        if not revenue_col:
+            # Try first numeric column as fallback
+            numeric_cols = _pick_numeric_columns()
+            revenue_col = numeric_cols[0] if numeric_cols else None
         if not revenue_col:
             return []
 
@@ -93,51 +97,82 @@ def generate_dashboard(df: pd.DataFrame, profile: Dict[str, Any]) -> List[Dict[s
 
         pick_date = date_cols[0] if date_cols else None
         pick_cat = client_col if client_col in df.columns else (cat_cols[0] if cat_cols else None)
+        other_cat = next((c for c in cat_cols if c != pick_cat), None)
         other_numeric = next((c for c in numeric_cols if c != revenue_col), None)
 
         configs: List[Dict[str, Any]] = []
-        # 1) Bar horizontal: category/client + revenue
+
+        # 1) Bar horizontal: top clients/categories ranked by revenue
         if pick_cat and revenue_col:
             configs.append({
                 "type": "bar",
-                "title": "Top Clients by Revenue",
+                "title": f"Top {pick_cat} by {revenue_col}",
                 "xKey": pick_cat,
                 "yKey": revenue_col,
                 "chartStyle": "horizontal",
-                "insight": "Identify the highest contributing clients.",
+                "insight": f"Identify the highest contributing {pick_cat} groups.",
                 "priority": 1,
             })
-        # 2) Pie: category share
+
+        # 2) Pie: revenue share across categories
         if pick_cat and revenue_col:
             configs.append({
                 "type": "pie",
-                "title": "Revenue Share",
+                "title": f"{revenue_col} Share by {pick_cat}",
                 "xKey": pick_cat,
                 "yKey": revenue_col,
                 "chartStyle": "pie",
-                "insight": "See how revenue is distributed across top groups.",
+                "insight": f"See how {revenue_col} is distributed across top {pick_cat} groups.",
                 "priority": 2,
             })
 
-        # Add simple alternates to reach 6.
-        # Use other categorical columns for the bar/pie.
-        for c in cat_cols:
-            if len(configs) >= 6:
-                break
-            if c == pick_cat:
-                continue
+        # 3) Area/line trend over time
+        if pick_date and revenue_col:
+            configs.append({
+                "type": "area",
+                "title": f"{revenue_col} Trend Over Time",
+                "xKey": pick_date,
+                "yKey": revenue_col,
+                "chartStyle": "area",
+                "insight": f"Track how {revenue_col} changes over {pick_date}.",
+                "priority": 3,
+            })
+        elif other_cat and revenue_col and other_cat != pick_cat:
+            # No date column: use another category as bar-vertical
             configs.append({
                 "type": "bar",
-                "title": f"Top {c} by Revenue",
-                "xKey": c,
+                "title": f"{revenue_col} by {other_cat}",
+                "xKey": other_cat,
                 "yKey": revenue_col,
-                "chartStyle": "horizontal",
-                "insight": f"Rank {c} by their revenue contribution.",
-                "priority": 5,
+                "chartStyle": "vertical",
+                "insight": f"Compare {revenue_col} across {other_cat} groups.",
+                "priority": 3,
             })
 
-        # Ensure exactly up to 6.
-        return configs[:6]
+        # 4) Scatter (two numerics) OR second bar with different dimension
+        if other_numeric and revenue_col and other_numeric != revenue_col:
+            configs.append({
+                "type": "scatter",
+                "title": f"{revenue_col} vs {other_numeric}",
+                "xKey": other_numeric,
+                "yKey": revenue_col,
+                "chartStyle": "scatter",
+                "insight": f"Explore the relationship between {other_numeric} and {revenue_col}.",
+                "priority": 4,
+            })
+        elif other_cat and revenue_col:
+            dim = other_cat if other_cat != pick_cat else (cat_cols[1] if len(cat_cols) > 1 else pick_cat)
+            configs.append({
+                "type": "bar",
+                "title": f"Top {dim} by {revenue_col}",
+                "xKey": dim,
+                "yKey": revenue_col,
+                "chartStyle": "horizontal",
+                "insight": f"Rank {dim} by their {revenue_col} contribution.",
+                "priority": 4,
+            })
+
+        return configs[:4]
 
     # Fast deterministic mode: avoids expensive LLM generation for chart configs.
     # You can turn LLM generation back on by setting USE_DASHBOARD_LLM=1 in the backend env.
@@ -186,18 +221,18 @@ IMPORTANT:
 - Never use quarter labels unless those exact strings exist as actual data values.
 
 Task:
-Generate exactly 6 chart configs as a minified JSON array. Each config MUST include:
+Generate exactly 4 chart configs as a minified JSON array. Each config MUST include:
   type, title, xKey, yKey, chartStyle, insight, priority
 
-Chart selection rules (choose best matches from the data shape):
-- one category + one numeric → bar horizontal for rankings
-- date + numeric → area chart for trends
-- category share → pie (max 8 slices)
-- two numerics → scatter
+You MUST produce exactly these 4 chart types in order:
+1. bar (chartStyle: "horizontal") — top categories ranked by a numeric column
+2. pie — share/distribution of a numeric column across a category
+3. area — trend of a numeric column over a date column (if dates exist, else bar vertical with a different category)
+4. scatter — relationship between two numeric columns (if two exist, else bar horizontal with a different category)
 
 Priority:
-- Use integers 1..6 (1 = highest).
-- Ensure variety across the 6 charts.
+- Use integers 1..4 (1 = highest).
+- Each chart MUST use a different combination of columns for variety.
 
 Output constraints:
 - Output JSON only (no markdown, no explanation).
@@ -291,6 +326,22 @@ Output constraints:
             points = [[float(r[xKey]), float(r[yKey])] for _, r in sample.iterrows()]
             cfg["data"] = {"x_label": xKey, "y_label": yKey, "data": points}
 
+        elif valid_keys and chart_type == "bar":
+            # bar vertical (or any remaining bar style)
+            grouped = df[[xKey, yKey]].copy()
+            grouped[yKey] = pd.to_numeric(grouped[yKey], errors="coerce")
+            grouped = grouped.dropna(subset=[yKey])
+            series = (
+                grouped.groupby(xKey)[yKey]
+                .sum()
+                .sort_values(ascending=False)
+                .head(15)
+            )
+            cfg["data"] = {
+                "labels": [str(k) for k in series.index.tolist()],
+                "values": [float(v) for v in series.values.tolist()],
+            }
+
         else:
             # Unknown type or invalid keys: keep the config, but return empty data
             # so the frontend can still render the card (and we don't end up with 0 charts).
@@ -302,8 +353,8 @@ Output constraints:
         enriched.append(cfg)
 
     enriched.sort(key=lambda c: int(c.get("priority", 999)))
-    # If the model returned fewer than 6, fill with deterministic fallbacks.
-    if len(enriched) < 6:
+    # If the model returned fewer than 4, fill with deterministic fallbacks.
+    if len(enriched) < 4:
         existing_ids = {c.get("id") for c in enriched}
         for fb_i, fb in enumerate(_fallback_configs()):
             fb = dict(fb)
@@ -313,5 +364,5 @@ Output constraints:
             fb = _map_to_frontend_fields(fb)
             enriched.append(fb)
 
-    return enriched[:6]
+    return enriched[:4]
 

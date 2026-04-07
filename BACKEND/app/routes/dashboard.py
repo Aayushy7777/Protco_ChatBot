@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -11,6 +12,66 @@ from app.services.dashboard_gen import generate_dashboard
 
 
 router = APIRouter()
+
+
+def _build_kpi_cards(df: pd.DataFrame, profile: Dict[str, Any]) -> List[Dict[str, Any]]:
+    auto = profile.get("auto_detected") or {}
+    numeric_cols = profile.get("numeric_columns") or {}
+    categorical_cols = profile.get("categorical_columns") or {}
+    revenue_col = auto.get("revenue_column")
+    client_col = auto.get("client_column")
+
+    kpis: List[Dict[str, Any]] = []
+
+    kpis.append({
+        "title": "Total Records",
+        "value": int(df.shape[0]),
+        "unit": "",
+        "trend": 0,
+        "is_currency": False,
+    })
+
+    if revenue_col and revenue_col in df.columns:
+        rev = pd.to_numeric(df[revenue_col], errors="coerce").dropna()
+        if len(rev) > 0:
+            kpis.append({
+                "title": f"Total {revenue_col}",
+                "value": float(rev.sum()),
+                "unit": "",
+                "trend": 0,
+                "is_currency": True,
+            })
+
+    for col, stats in list(numeric_cols.items())[:2]:
+        if col == revenue_col:
+            continue
+        num = pd.to_numeric(df[col], errors="coerce").dropna()
+        if len(num) == 0:
+            continue
+        kpis.append({
+            "title": f"Avg {col}",
+            "value": float(num.mean()),
+            "unit": "",
+            "trend": 0,
+            "is_currency": False,
+        })
+        if len(kpis) >= 5:
+            break
+
+    return kpis[:5]
+
+
+def _build_category_values(df: pd.DataFrame, profile: Dict[str, Any]) -> List[str]:
+    auto = profile.get("auto_detected") or {}
+    client_col = auto.get("client_column")
+    categorical_cols = list((profile.get("categorical_columns") or {}).keys())
+
+    col = client_col if (client_col and client_col in df.columns) else (categorical_cols[0] if categorical_cols else None)
+    if not col or col not in df.columns:
+        return []
+
+    vals = df[col].dropna().astype(str).unique().tolist()
+    return sorted(vals)[:20]
 
 
 class AutoDashboardRequest(BaseModel):
@@ -28,7 +89,24 @@ async def auto_dashboard(req: AutoDashboardRequest) -> Dict[str, Any]:
     df = _dataframes[filename]
     profile = _profiles[filename]
     charts = generate_dashboard(df, profile)
-    return {"charts": charts}
+    kpi_cards = _build_kpi_cards(df, profile)
+    category_values = _build_category_values(df, profile)
+
+    auto = profile.get("auto_detected") or {}
+    revenue_col = auto.get("revenue_column") or "amount"
+    client_col = auto.get("client_column") or "category"
+    total_records = int(df.shape[0])
+    ceo_summary = (
+        f"Dataset has {total_records:,} records across {df.shape[1]} columns. "
+        f"Key dimensions: {revenue_col}, {client_col}."
+    )
+
+    return {
+        "charts": charts,
+        "kpi_cards": kpi_cards,
+        "category_values": category_values,
+        "ceo_summary": ceo_summary,
+    }
 
 
 class FilterRequest(BaseModel):

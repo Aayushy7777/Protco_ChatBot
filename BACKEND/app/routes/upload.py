@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -50,6 +51,8 @@ async def upload_files(files: List[UploadFile] = File(...)) -> Dict[str, Any]:
                 df = pd.read_csv(io.BytesIO(raw_bytes))
             else:
                 df = pd.read_excel(io.BytesIO(raw_bytes))
+
+            df.columns = [re.sub(r"<[^>]+>", "", str(c)).strip() for c in df.columns]
 
             profile = profile_dataframe(df, filename=filename)
             register_dataframe(filename, df, profile)
