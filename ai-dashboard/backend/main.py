@@ -24,6 +24,7 @@ from mission_control_bridge import (
     send_heartbeat,
 )
 from ollama_client import chat, check_ollama, generate_insights, generate_suggestions
+from local_csv_chat import register_dataframe, chat_with_data
 
 load_dotenv()
 
@@ -89,6 +90,10 @@ async def upload(file: UploadFile = File(...)):
     try:
         df = read_file(filepath)
         df = cast_column_types(df)
+        
+        # Register DataFrame for CSV chat module
+        register_dataframe(df, file.filename)
+        
         profile = build_profile(df, file.filename)
         charts = build_charts(df, profile)
 
@@ -153,28 +158,39 @@ class ChatRequest(BaseModel):
 
 @app.post("/api/chat")
 async def chat_endpoint(req: ChatRequest):
-    if not _session.get("profile"):
-        return JSONResponse({"reply": "No file loaded. Please upload first."})
-
-    profile = _session["profile"]
-    try:
-        reply = await chat(req.message, profile["context_text"], req.history)
-        asyncio.create_task(
-            log_activity(
-                "chat_query",
-                f"Chat query answered: {req.message[:60]}...",
-                {"question": req.message, "model": os.getenv("OLLAMA_MODEL", "llama3.1")},
-            )
+    """Chat endpoint using local CSV data context with dynamic chart generation."""
+    # Use new chat_with_data for accurate data-driven responses
+    result = chat_with_data(req.message, req.history)
+    
+    # Log activity
+    asyncio.create_task(
+        log_activity(
+            "chat_query",
+            f"Chat query answered: {req.message[:60]}...",
+            {
+                "question": req.message,
+                "data_used": result.get("data_used", False),
+                "pre_computed": result.get("pre_computed", False),
+                "chart_generated": result.get("chart") is not None,
+            },
         )
-        asyncio.create_task(
-            report_tokens(
-                prompt_tokens=max(1, len(req.message) // 4),
-                completion_tokens=max(1, len(reply) // 4),
-            )
+    )
+    
+    # Report token usage
+    asyncio.create_task(
+        report_tokens(
+            prompt_tokens=max(1, len(req.message) // 4),
+            completion_tokens=max(1, len(result.get("answer", "")) // 4),
         )
-        return JSONResponse({"reply": reply})
-    except Exception as e:
-        return JSONResponse({"reply": f"Error: {str(e)}"})
+    )
+    
+    return JSONResponse({
+        "answer": result.get("answer", "Error"),
+        "reply": result.get("answer", "Error"),  # For backwards compatibility
+        "data_used": result.get("data_used", False),
+        "error": result.get("error"),
+        "chart": result.get("chart")  # Include chart config if generated
+    })
 
 
 @app.get("/api/health")

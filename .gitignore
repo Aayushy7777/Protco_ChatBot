@@ -95,8 +95,10 @@ test_results.txt
 *.psd
 *.zip
 
-# Markdown files
-*.md
+# Temporary test files (but keep important docs)
+test_*.py
+test_*.csv
+tmp_*.csv
 
 # mission-control repos
 mission-control/

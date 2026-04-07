@@ -167,10 +167,146 @@ def build_charts(df: pd.DataFrame, profile: dict) -> list:
                     }
                 )
 
-    # Only return charts with data
+    # --- CHART 5: Top 10 Items (horizontal bar ranking) ---
+    if category_col and category_col in df.columns:
+        value_col = amount_col if amount_col in df.columns else _first_numeric_col(profile)
+        if value_col and value_col in df.columns and pd.api.types.is_numeric_dtype(df[value_col]):
+            top_items = (
+                df.groupby(category_col, dropna=False)[value_col]
+                .sum(min_count=1)
+                .sort_values(ascending=True)  # ascending for horizontal bar
+                .tail(10)
+                .reset_index()
+            )
+            top_items = top_items.dropna(subset=[value_col])
+            if len(top_items) >= 2:
+                total_top = float(top_items[value_col].sum())
+                top_count = len(top_items)
+                insight = f"Top {top_count} {category_col} contribute {format_number(total_top)} — deep analysis of key players"
+                charts.append(
+                    {
+                        "id": "chart_top_items",
+                        "type": "horizontalBar",
+                        "title": f"Top 10 {category_col.replace('_',' ')} by {value_col.replace('_',' ')}",
+                        "insight": insight,
+                        "x_key": value_col,
+                        "y_key": category_col,
+                        "data": top_items.to_dict(orient="records"),
+                        "wide": True,
+                    }
+                )
+
+    # --- CHART 6: Pareto Analysis (80/20 rule) ---
+    if category_col and category_col in df.columns:
+        value_col = amount_col if amount_col in df.columns else _first_numeric_col(profile)
+        if value_col and value_col in df.columns and pd.api.types.is_numeric_dtype(df[value_col]):
+            pareto_data = (
+                df.groupby(category_col, dropna=False)[value_col]
+                .sum(min_count=1)
+                .sort_values(ascending=False)
+                .reset_index()
+            )
+            pareto_data = pareto_data.dropna(subset=[value_col])
+            if len(pareto_data) >= 3:
+                total = float(pareto_data[value_col].sum())
+                pareto_data["cumulative_pct"] = (
+                    pareto_data[value_col].cumsum() / total * 100
+                ).round(1)
+                # Find items that contribute to 80%
+                cutoff_idx = (pareto_data["cumulative_pct"] <= 80).sum() + 1
+                vital_few = pareto_data.head(cutoff_idx)
+                vital_count = len(vital_few)
+                vital_total = float(vital_few[value_col].sum())
+                insight = f"{vital_count} of {len(pareto_data)} {category_col} (Vital Few) drive {vital_total/total*100:.0f}% of {value_col}"
+                charts.append(
+                    {
+                        "id": "chart_pareto",
+                        "type": "bar",
+                        "title": f"Pareto Analysis: {value_col.replace('_',' ')} by {category_col.replace('_',' ')}",
+                        "insight": insight,
+                        "x_key": category_col,
+                        "y_key": value_col,
+                        "data": pareto_data[[category_col, value_col, "cumulative_pct"]].to_dict(orient="records"),
+                        "wide": True,
+                    }
+                )
+
+    # --- CHART 7: Records Count by Category (volume analysis) ---
+    if category_col and category_col in df.columns:
+        count_by_cat = (
+            df[category_col].fillna("Unknown").astype(str).str.strip()
+            .value_counts()
+            .sort_values(ascending=False)
+            .head(10)
+            .reset_index()
+        )
+        count_by_cat.columns = [category_col, "count"]
+        if len(count_by_cat) >= 2:
+            total_records = len(df)
+            top_category = count_by_cat.iloc[0]
+            top_pct = round(top_category["count"] / total_records * 100, 1)
+            insight = f"{top_category[category_col]} has {top_category['count']} records ({top_pct}% of total {total_records})"
+            charts.append(
+                {
+                    "id": "chart_volume",
+                    "type": "bar",
+                    "title": f"Record Count by {category_col.replace('_',' ')}",
+                    "insight": insight,
+                    "x_key": category_col,
+                    "y_key": "count",
+                    "data": count_by_cat.to_dict(orient="records"),
+                    "wide": False,
+                }
+            )
+
+    # --- CHART 8: Amount Distribution (histogram of transaction/amount ranges) ---
+    value_col = amount_col if amount_col and amount_col in df.columns else _first_numeric_col(profile)
+    if value_col and value_col in df.columns and pd.api.types.is_numeric_dtype(df[value_col]):
+        # Create bins for distribution
+        valid_values = df[value_col].dropna()
+        if len(valid_values) >= 10:
+            min_val = float(valid_values.min())
+            max_val = float(valid_values.max())
+            if min_val < max_val:
+                bins = 8
+                bin_edges = pd.cut(valid_values, bins=bins, include_lowest=True)
+                bin_counts = bin_edges.value_counts().sort_index()
+                
+                dist_data = []
+                for interval, count in bin_counts.items():
+                    if pd.notna(interval):
+                        try:
+                            label = f"{format_number(interval.left)}-{format_number(interval.right)}"
+                        except:
+                            label = str(interval)
+                        dist_data.append({
+                            "range": label,
+                            "frequency": int(count)
+                        })
+                
+                if dist_data:
+                    avg_val = round(float(valid_values.mean()), 2)
+                    median_val = round(float(valid_values.median()), 2)
+                    insight = f"{value_col} ranges from {format_number(min_val)} to {format_number(max_val)} — median: {format_number(median_val)}, avg: {format_number(avg_val)}"
+                    charts.append(
+                        {
+                            "id": "chart_distribution",
+                            "type": "bar",
+                            "title": f"{value_col.replace('_',' ').title()} Distribution",
+                            "insight": insight,
+                            "x_key": "range",
+                            "y_key": "frequency",
+                            "data": dist_data,
+                            "wide": True,
+                        }
+                    )
+
+    # Only return charts with data (max 4 charts - keep the most important ones)
     out = []
     for c in charts:
         if isinstance(c.get("data"), list) and len(c["data"]) >= 2:
             out.append(c)
+            if len(out) >= 4:  # Limit to 4 charts only
+                break
     return out
 

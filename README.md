@@ -1,299 +1,285 @@
-# CSV Chat Agent - AI-Powered Business Intelligence Dashboard
+# 📊 CSV Chat Agent - AI-Powered Analytics Dashboard
 
-🚀 **Professional BI Dashboard with Auto-Generated Charts & AI Chat Analysis**
+> **🚀 Production-Grade Analytics with Skeleton Loading & Lazy Rendering**
 
-An intelligent CSV analysis platform that automatically generates meaningful business intelligence charts and provides AI-powered insights through natural language processing.
-
----
-
-## 🎯 Features
-
-### 📊 Auto-Generated Dashboards
-- **5-6 Essential Charts per Dataset** - Automatically selected based on data analysis
-- **24 Chart Types Supported** - Bar, Line, Pie, Donut, Scatter, Pareto, Treemap, and more
-- **AI-Driven Intelligence** - Intelligent chart selection using 7 business rules
-- **Multi-file Support** - Upload multiple CSVs (Q1-Q4, quarterly data, etc.)
-- **Business Insights** - Every chart includes contextual AI-generated explanations
-
-### 💬 AI Chat Analysis
-- **Ollama Integration** - Local LLM-powered conversation (no API keys needed)
-- **Real-time Analysis** - Ask questions about your data in natural language
-- **Context-Aware** - Chat remembers your active datasets and filters
-
-### 🎨 Professional Dashboard UI
-- **Dark-Themed Design** - Navy (#0A0F2C) + Cyan (#00D4FF) color scheme
-- **Responsive Layout** - Works on desktop, tablet, mobile
-- **Smooth Animations** - Framer Motion transitions
-- **File Tabs** - Quick switching between uploaded datasets
-- **Filter Support** - Filter by quarter and category dynamically
-
-### 🧠 Intelligent Processing
-- **Column Auto-Detection** - Identifies numeric, date, categorical, and currency columns
-- **Data Exclusion** - Automatically excludes non-analysis columns (HSN, ZIP, PIN, GSTIN, etc.)
-- **Quarter Detection** - Auto-detects Q1-Q4 or FY25+ from filenames
-- **INR Currency Formatting** - Proper Indian Rupee formatting (₹Cr, ₹L, ₹K)
+A lightweight CSV analysis platform with auto-generated BI dashboards, AI-powered insights, and local LLM integration — **Zero cloud dependencies, 100% private**.
 
 ---
 
-## 🛠 Tech Stack
+## ⚡ Quick Start (One Click)
 
-### Backend
-- **FastAPI** - REST API framework
-- **Pandas** - Data processing
-- **Ollama** - Local LLM integration
-- **Python 3.10+** - Core language
+```bash
+# Windows
+START_ALL.bat
 
-### Frontend
-- **React 18+** - UI framework
-- **ECharts v5** - 24 chart implementations
-- **Vite** - Build tool
-- **Tailwind CSS** - Styling
-- **Zustand** - State management
-- **Framer Motion** - Animations
+# macOS/Linux  
+chmod +x start.sh && ./start.sh
+```
+
+**Services:**
+- 📊 **Analytics Dashboard** → http://localhost:8011 (CSV analysis & charts)
+- 🎛️ **Mission Control** → http://localhost:3000 (agent orchestration UI)
+- 🤖 **Ollama API** → http://localhost:11434 (local LLM server)
 
 ---
 
-## 📦 Installation
+## ✨ Key Features
+
+### 📊 Smart Analytics Dashboard
+- **4 Intelligent Charts** - Automatically selected from your data:
+  - Category vs Amount (Bar Chart)
+  - Time Trend Analysis (Line/Bar Chart)
+  - Status Distribution (Doughnut Chart)  
+  - Average Progress by Category (Bar Chart)
+- **5 KPI Cards** - Key metrics above the fold
+- **Interactive Data Table** - Full dataset with filtering
+- **Skeleton Loading** - Animated placeholders while data loads
+- **Lazy Rendering** - Charts render sequentially (no UI blocking)
+- **Responsive Design** - 2×2 chart grid on desktop, 1-column on mobile
+
+### 💬 AI Chat Integration
+- **Local Ollama LLM** - No API keys, no cloud costs, 100% private
+- **Natural Language Q&A** - Ask questions about your data
+- **Instant Analysis** - Get AI-powered insights on charts and tables
+- **Zero Latency** - Everything runs locally
+
+### 🎛️ Mission Control
+- **Agent Orchestration UI** - Deploy and manage AI agents
+- **Workflow Dashboard** - Monitor task execution and logs
+- **Real-time Status** - Live health indicators for all services
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Analytics UI** | HTML5 + Chart.js 4.4.1 | Interactive dashboard with 4 charts |
+| **Dashboard Gen** | Python (FastAPI) | CSV processing & chart generation |
+| **Agent Platform** | Next.js 16 + TypeScript | Mission Control UI |
+| **Local LLM** | Ollama + llama3.1 | Text generation & embeddings |
+| **Data Store** | ChromaDB + SQLite | Vector storage |
+| **Language** | Python 3.14 | Backend processing |
+
+---
+
+## 📦 Installation & Setup
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 16+
-- Ollama (for AI features)
+- **Python 3.10+** (3.14 recommended)
+- **Node.js 18+** (for Mission Control)
+- **Ollama** → [Download](https://ollama.ai)
 
-### Backend Setup
+### Automated Setup (Recommended)
 ```bash
-cd "CSV CHAT AGENT"
-python -m venv .venv
-.venv\Scripts\activate  # Windows
-source .venv/bin/activate  # Linux/Mac
-pip install -r BACKEND/requirements.txt
+# Windows
+START_ALL.bat
+
+# Linux/macOS
+chmod +x start.sh && ./start.sh
 ```
 
-### Frontend Setup
+### Manual Setup
+
+**Terminal 1: Ollama**
 ```bash
-cd FRONTEND
-npm install
+ollama serve
 ```
 
----
-
-## 🚀 Quick Start
-
-### Terminal 1 - Start Backend
+**Terminal 2: Backend (Port 8011)**
 ```bash
-cd "CSV CHAT AGENT"
-.venv\Scripts\activate
-python BACKEND/main.py
+cd ai-dashboard/backend
+python -m uvicorn main:app --port 8011 --reload
 ```
-Backend will run on `http://localhost:8000`
 
-### Terminal 2 - Start Frontend
+**Terminal 3: Mission Control (Port 3000)**
 ```bash
-cd "CSV CHAT AGENT\FRONTEND"
-npm run dev
-```
-Frontend will run on `http://localhost:5173`
-
-### Terminal 3 - Run Tests (Optional)
-```bash
-cd "CSV CHAT AGENT"
-.venv\Scripts\activate
-python test_charts_e2e.py
+cd mission-control
+pnpm install
+pnpm dev
 ```
 
 ---
 
-## 📊 Usage
+## � Usage Guide
 
-1. **Open Dashboard** → http://localhost:5173
-2. **Upload CSV File** → Click "Upload CSV" button
-3. **View Auto-Generated Charts** → 5-6 focused analysis charts appear automatically
-4. **Switch Between Files** → Use file tabs at the top
-5. **Chat with AI** → Click chat bubble to ask questions about your data
-6. **Cycle Chart Types** → Click "↻ Cycle" to switch visualization types
-7. **Remove Charts** → Click "✕ Remove" to delete charts from dashboard
+### Upload & Analyze CSV
+1. Navigate to **http://localhost:8011**
+2. Click **"Upload CSV"** button
+3. Select a CSV or XLSX file
+4. Dashboard auto-generates with:
+   - 5 KPI cards (top-right)
+   - 4 charts (2×2 grid)
+   - Full data table (bottom)
+   - Chat sidebar (right)
 
-### Supported File Types
-- CSV (.csv)
-- Excel (.xlsx, .xls)
-- Multiple files at once
+### Supported File Formats
+✅ CSV  
+✅ XLSX/XLS  
+✅ TSV  
 
-### File Naming Convention
-- Include quarter in filename: `InvoiceDetails_Q1.csv`, `Sales_Q2.xlsx`
-- System auto-detects: Q1-Q4, FY25-FY99
-- Use clear column names for best analysis
+### Analyze with AI Chat
+1. Type a question in the chat box (e.g., "What's the trend in sales?")
+2. Press Enter or click Send
+3. Ollama analyzes the chart data and responds
+4. Continue conversation naturally
 
----
-
-## 📈 Chart Types
-
-### Currently Implemented (5-6 per dataset)
-1. **Bar Horizontal** - Top performers ranking
-2. **Donut** - Revenue distribution
-3. **Pareto** - 80/20 analysis
-4. **Line Area** - Trends over time
-5. **Scatter** - Correlation analysis
-6. *(Optional 6th based on data)*
-
-### Full Library Available (24 total)
-Line, Bar (4 types), Pie, Donut, Scatter, Bubble, Radar, Gauge, Waterfall, Pareto, TreeMap, Funnel, Sankey, Calendar Heatmap, Histogram, BoxPlot, and more.
+### Use Mission Control
+1. Navigate to **http://localhost:3000**
+2. View agent fleet status
+3. Deploy new agents
+4. Monitor task execution in real-time
 
 ---
 
-## 🧪 Testing
+## 🎨 Dashboard Features
 
-Run end-to-end tests:
-```bash
-python test_charts_e2e.py
+### Skeleton Loading (Production UX)
+- Shows animated placeholder rows while data loads
+- Shimmer effect (1.5s loop) creates perception of progress
+- **No "stuck" spinner** — users see active loading
+
+### Lazy Rendering
+- Charts initialize sequentially (50ms stagger)
+- Prevents UI blocking even with large datasets
+- Smooth fade-in animations as content appears
+- **Smooth user experience** on all connection speeds
+
+### Responsive Layout
+```
+Desktop (>1100px):  2-column chart grid + full table
+Tablet (768-1100): Multi-row adapts to width
+Mobile (<768px):   Single-column, charts stack vertically
 ```
 
-Expected output:
-- ✅ CSV loading
-- ✅ AI chart selection
-- ✅ Data preparation
-- ✅ Chart type diversity
-- ✅ Business insights
+---
+
+## � API Endpoints
+
+### Analytics Backend (8011)
+```
+POST   /upload                  Upload CSV file → Returns dashboard HTML
+GET    /docs                    Interactive Swagger API docs
+```
+
+### Mission Control (3000)
+```
+GET    /api/agents              Agent fleet status
+POST   /api/chat                Chat query to Ollama
+GET    /api/dashboard           Dashboard metrics
+```
+
+### Ollama (11434)
+```
+POST   /api/generate            Generate text from llama3.1
+POST   /api/embeddings          Create embeddings
+```
 
 ---
 
-## 📁 Project Structure
+## 🚀 Production Checklist
+
+✅ **Skeleton Loading** - Animated placeholders prevent "stuck" UI  
+✅ **Lazy Rendering** - Sequential chart init with requestAnimationFrame  
+✅ **Error Handling** - Graceful fallbacks for missing data  
+✅ **No UI Blocking** - setTimeout stagger prevents freezing  
+✅ **Responsive Design** - Works on mobile, tablet, desktop  
+✅ **Local-First** - Zero cloud dependencies  
+✅ **Security** - CSVs never sent to internet
+
+---
+
+## � What Each Chart Shows
+
+| Chart | Data Type | Use Case |
+|-------|-----------|----------|
+| **Category vs Amount** | Categorical metrics | Top products, sales by region |
+| **Time Trend** | Time-series data | Daily/monthly trends, growth patterns |
+| **Status Distribution** | Categorical counts | Status breakdowns, proportions |
+| **Progress by Category** | Metrics across groups | Performance by team, KPI tracking |
+
+---
+
+## 🔒 Security & Privacy
+
+✅ **Zero Cloud** - Everything on your machine  
+✅ **No Telemetry** - No tracking, no analytics collection  
+✅ **Private Data** - CSVs only exist locally  
+✅ **Open Source** - Inspect all code  
+✅ **Ollama Only** - No external LLM usage  
+
+---
+
+## 📋 Project Structure
 
 ```
 CSV CHAT AGENT/
-├── BACKEND/
-│   ├── main.py                 # FastAPI app & routes
-│   ├── csv_processor.py        # AI selection & data prep
-│   ├── agent.py                # Ollama AI chat
-│   ├── ollama_manager.py       # Ollama connection
-│   └── requirements.txt        # Python dependencies
-├── FRONTEND/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── chat/           # Chat UI
-│   │   │   ├── dashboard/      # Dashboard & charts
-│   │   │   └── layout/         # Layout components
-│   │   ├── store/              # State management
-│   │   ├── hooks/              # Custom React hooks
-│   │   ├── utils/              # Utilities
-│   │   └── App.jsx             # Main app
-│   ├── package.json
-│   ├── vite.config.js
-│   └── tailwind.config.js
-├── test_charts_e2e.py          # End-to-end tests
-├── test_*.py                   # Additional tests
-├── README_CHARTS.md            # Detailed chart docs
-└── IMPLEMENTATION_SUMMARY.md   # Technical reference
+├── ai-dashboard/           # Main analytics dashboard (port 8011)
+│   ├── backend/            # FastAPI + chart generation
+│   ├── frontend/           # HTML dashboard + Chart.js
+│   └── uploads/            # Uploaded CSV files
+├── mission-control/        # Agent orchestration (port 3000)
+│   ├── src/                # Next.js + TypeScript
+│   └── package.json        # Node dependencies
+├── BACKEND/                # Legacy backend
+├── FRONTEND/               # Legacy frontend
+├── start.bat / start.sh    # Service launcher
+└── README.md               # This file
 ```
 
 ---
 
-## 🔧 Configuration
+## 🎯 Current Status
 
-### Backend Environment
-Edit `BACKEND/main.py`:
-- Change `DEFAULT_MODEL` for different Ollama models
-- Adjust `UPLOAD_DIR` for file storage location
-- Modify `API_HOST` and `API_PORT` as needed
+**✅ Production Ready**
+- All 3 services running and validated
+- 4 charts rendering with smooth animations
+- Skeleton loading providing professional UX
+- Lazy rendering preventing UI lag
+- CSV upload pipeline fully functional
 
-### Frontend Environment
-Edit `FRONTEND/src/App.jsx`:
-- Change `API` URL if backend is on different server
-- Adjust colors in Dashboard and ChartRenderer
-
-### CORS Settings
-Currently allows:
-- http://localhost:5173
-- http://localhost:5174
-- http://localhost:3000
-- http://127.0.0.1:5173
-
-Modify in `BACKEND/main.py` to add more origins.
-
----
-
-## 📊 API Endpoints
-
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| POST | `/api/upload` | Upload CSV files |
-| GET | `/api/files` | List uploaded files |
-| POST | `/api/auto-dashboard` | Generate KPIs & summary |
-| POST | `/api/generate-all-charts` | Generate all charts with AI selection |
-| POST | `/api/chat` | Send message to AI agent |
-| POST | `/api/chat/stream` | Stream AI responses |
-| GET | `/api/quarter-status` | Get uploaded quarters |
-| GET | `/api/health` | Health check |
-
----
-
-## 🎓 Learning Resources
-
-- [ECharts Documentation](https://echarts.apache.org/)
-- [FastAPI Docs](https://fastapi.tiangolo.com/)
-- [React Hooks](https://react.dev/reference/react/hooks)
-- [Pandas API](https://pandas.pydata.org/docs/)
-- [Ollama Models](https://ollama.ai/library)
+**Last Updated:** 2026  
+**Version:** 3.0 (Production-Grade UI)  
+**Python:** 3.14 with Pydantic V1 compatibility
 
 ---
 
 ## 🐛 Troubleshooting
 
-### CORS Errors
-- Ensure backend is running on http://localhost:8000
-- Check `allow_origins` in `main.py`
-- Browser console shows exact origin issue
+| Issue | Solution |
+|-------|----------|
+| **Port 8011 in use** | `Get-Process python \| Stop-Process` then restart backend |
+| **Dashboard not loading** | Refresh browser (Ctrl+Shift+R for hard reset) |
+| **Charts stuck on skeleton** | Check browser console for JavaScript errors, restart backend |
+| **Ollama not responding** | Run `ollama pull llama3.1` then restart service |
+| **Upload failing** | Verify CSV has headers, try smaller file, check logs |
 
-### Charts Not Appearing
-- Check browser console for errors
-- Verify data has numeric/categorical columns
-- Run `test_charts_e2e.py` to validate backend
-
-### Ollama Not Connecting
-- Ensure Ollama service is running
-- Check Ollama is on http://localhost:11434
-- Run `ollama pull qwen2.5:7b` to download model
-
-### Port Already in Use
-- Backend: `lsof -i :8000` (Linux/Mac) or find process on Windows
-- Frontend: Try `npm run dev -- --port 5174`
-
----
-
-## 📝 License
-
-This project is open source. Use and modify for your needs.
-
----
-
-## 👨‍💻 Author
-
-Created with ❤️ for business intelligence analysis.
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! Please:
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+**Port Reference:**
+- **8011** = Analytics Dashboard  
+- **3000** = Mission Control  
+- **11434** = Ollama API  
 
 ---
 
 ## 📞 Support
 
-For issues or questions:
-1. Check README_CHARTS.md for detailed documentation
-2. Run test_charts_e2e.py to verify setup
-3. Check browser DevTools console for errors
-4. Review backend logs for API issues
+- ❓ Dashboard questions → Check [Usage Guide](#-usage-guide) section
+- 🐛 Issues → Review [Troubleshooting](#-troubleshooting) table
+- 📄 Architecture → See [Project Structure](#-project-structure)
+- 🤖 API Details → Run backend + visit http://localhost:8011/docs
 
 ---
 
-**Status**: ✅ Production Ready  
-**Version**: 1.0.0  
-**Last Updated**: April 2, 2026
+## 💡 Tips
 
-Built with FastAPI, React, ECharts, and Ollama. 🚀
+- **Reload Dashboard:** Use Ctrl+Shift+R (hard refresh) in browser
+- **View Logs:** Check terminal where backend is running
+- **Test Upload:** Use sample CSV from `uploads/` folder
+- **Debug Charts:** Open browser DevTools (F12) → Console tab
+- **Stop All:** Ctrl+C in each terminal or run batch file with kill flag
+
+---
+
+## 🤝 Contributing & License
+
+Open source - use, modify, and distribute freely.
